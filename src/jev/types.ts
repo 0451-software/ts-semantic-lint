@@ -49,6 +49,95 @@ export function makeProbability(value: number): Probability {
 
 export type ChoiceType = "choice";
 
+/**
+ * Structured criterion — what the config holds. Either a plain string
+ * (the v0 form, still supported for backwards compatibility) or an
+ * object with `what` / `not_for` / `examples` per the Jev best-practice
+ * for disambiguating near-options. The HTTP body sent to Jev is always
+ * flat strings — see `normalizeCriterion` for the boundary conversion.
+ *
+ * The optional fields are typed `string | undefined` (not `?: string`) so
+ * the shape is assignable from Zod-inferred types under
+ * `exactOptionalPropertyTypes: true`.
+ */
+export type ChoiceCriterionInput =
+  | string
+  | {
+      readonly what: string;
+      readonly not_for?: string | undefined;
+      readonly examples?: readonly string[] | undefined;
+    };
+
+/**
+ * Structured instructions — what the config holds. Either a plain
+ * string (v0 form, backwards-compatible) or an object with `question` /
+ * `focus` / `inspect`. The HTTP body sent to Jev is always a single
+ * string — see `normalizeInstructions` for the boundary conversion.
+ *
+ * Optional fields are typed `string | undefined` (not `?: string`) so the
+ * shape is assignable from Zod-inferred types under
+ * `exactOptionalPropertyTypes: true`.
+ */
+export type InstructionsInput =
+  | string
+  | {
+      readonly question: string;
+      readonly focus?: string | undefined;
+      readonly inspect?: string | undefined;
+    };
+
+/**
+ * The parsed config shape of a Choice question, holding the structured
+ * form. The runner flattens these into the wire shape (`Question` /
+ * `ChoiceQuestion`) when constructing the Jev HTTP body.
+ */
+export interface ChoiceQuestionInput {
+  readonly type: ChoiceType;
+  readonly instructions: InstructionsInput;
+  /** Choice id → criterion (string or structured object). 2..255 entries. */
+  readonly criteria: Readonly<Record<string, ChoiceCriterionInput>>;
+}
+
+/**
+ * Flatten an `InstructionsInput` to the single string the Jev HTTP API
+ * accepts. When the input is a structured object, `focus` and `inspect`
+ * are appended so the model still sees the rubric context.
+ */
+export function normalizeInstructions(input: InstructionsInput): string {
+  if (typeof input === "string") return input;
+  const parts: string[] = [input.question];
+  if (input.focus !== undefined && input.focus.trim().length > 0) {
+    parts.push(`Focus: ${input.focus}`);
+  }
+  if (input.inspect !== undefined && input.inspect.trim().length > 0) {
+    parts.push(`Inspect: ${input.inspect}`);
+  }
+  return parts.join(" ");
+}
+
+/**
+ * Flatten a `ChoiceCriterionInput` to the single string the Jev HTTP
+ * API accepts. When the input is a structured object, `not_for` and
+ * `examples` are appended so the model still sees the rubric context.
+ */
+export function normalizeCriterion(input: ChoiceCriterionInput): string {
+  if (typeof input === "string") return input;
+  const parts: string[] = [input.what];
+  if (input.not_for !== undefined && input.not_for.trim().length > 0) {
+    parts.push(`Not for: ${input.not_for}`);
+  }
+  if (input.examples !== undefined && input.examples.length > 0) {
+    parts.push(`Examples: ${input.examples.join("; ")}`);
+  }
+  return parts.join(" ");
+}
+
+/**
+ * The wire shape — what the Jev HTTP API actually receives. Both
+ * `instructions` and every criterion value are flat strings. Build this
+ * shape from a parsed `ChoiceQuestionInput` via `toWireQuestion` so the
+ * flattening logic lives in one place.
+ */
 export interface ChoiceQuestion {
   readonly type: ChoiceType;
   readonly instructions: string;
@@ -57,6 +146,24 @@ export interface ChoiceQuestion {
 }
 
 export type Question = ChoiceQuestion;
+
+/**
+ * Convert a parsed config `ChoiceQuestionInput` (structured form) to
+ * the wire `Question` (flat strings) the Jev HTTP client actually
+ * receives. This is the boundary: the config holds the structured form
+ * for clarity, the HTTP body is the derived flat string.
+ */
+export function toWireQuestion(input: ChoiceQuestionInput): Question {
+  const criteria: Record<string, string> = {};
+  for (const [key, value] of Object.entries(input.criteria)) {
+    criteria[key] = normalizeCriterion(value);
+  }
+  return {
+    type: "choice",
+    instructions: normalizeInstructions(input.instructions),
+    criteria,
+  };
+}
 
 export function validateQuestion(question: Question): void {
   if (question.type !== "choice") {
@@ -72,6 +179,11 @@ export function validateQuestion(question: Question): void {
   for (const key of Object.keys(question.criteria)) {
     if (key.trim().length === 0) {
       throw new Error("choice names must not be empty");
+    }
+  }
+  for (const [key, value] of Object.entries(question.criteria)) {
+    if (value.trim().length === 0) {
+      throw new Error(`choice "${key}" description must not be empty`);
     }
   }
 }

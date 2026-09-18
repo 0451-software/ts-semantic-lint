@@ -159,6 +159,39 @@ src/format.ts:12:1
 
 A compact single-line output is planned but not yet available in this build.
 
+The same rule written with the plain-string form for `instructions` and `criteria` —
+no behavioral difference, just shorter to read:
+
+```json
+{
+  "id": "function-simplicity",
+  "where": { "kind": "function", "has_body": true },
+  "context": "enclosing",
+  "question": {
+    "type": "choice",
+    "instructions": "Is this TypeScript function appropriately simple for its purpose? Judge avoidable complexity — branching, indirection, or bookkeeping that obscures the work. Length alone is not complexity.",
+    "criteria": {
+      "simple": "Each line carries its weight. Any branching or indirection is justified by the function's responsibility. Not for long functions whose length is justified by their responsibility (parsers, formatters, validators with many cases).",
+      "needlessly_complex": "There is avoidable branching, indirection, or bookkeeping that a clearer version of the same function would not need. Examples: a boolean flag that selects between two near-identical branches; an intermediate variable that holds a value used exactly once on the next line; defensive null checks for values that the type system has already excluded.",
+      "insufficient_context": "Without the file's surrounding code, the call sites, or the spec, this judgment can't be made reliably."
+    }
+  },
+  "diagnostics": [
+    {
+      "when": { "choice": "needlessly_complex", "min_confidence": 0.5 },
+      "level": "warn",
+      "message": "Consider whether {name} can express its work more directly."
+    }
+  ]
+}
+```
+
+Use the structured form (the one above this) when your criteria need `not_for` boundaries
+or `examples` arrays — the model has measurably tighter distributions when given those. Use
+the plain-string form (this one) for short self-explanatory rules where each criterion is
+clear from its name. Both forms can be mixed within one question: a single `criteria` object
+may have some string values and some object values.
+
 ### `comment-value`
 
 Judges whether the JSDoc on a function adds information beyond what the signature and
@@ -333,11 +366,18 @@ Three things to know about the `question`:
 - **`context`** controls how much surrounding code Jev receives: `target` (just the node),
   `enclosing` (the smallest enclosing function or block), or `file` (the whole file).
   `enclosing` is the right default for most rules; `file` is rarely worth the token cost.
-- **`instructions.focus`** is the most influential part of the prompt. It tells Jev what
-  *not* to confuse the question with — for `function-simplicity`, the focus phrase is
-  exactly *"Length alone is not complexity"*. Without that phrase the rule over-matches.
-- **`criteria`** is structured, not freeform. Each criterion has a `what`; the optional
-  `not_for` and `examples` fields give Jev concrete boundaries and edge cases.
+- **`instructions`** is either a plain string or a `{question, focus?, inspect?}` object.
+  Use the object form when you want to give Jev a *focus* clause (the most influential part
+  of the prompt — for `function-simplicity`, the focus phrase is exactly *"Length alone
+  is not complexity"*; without it the rule over-matches) or an `inspect` pointer to the
+  state fields the model should read first. Use the plain string form when the question
+  is short and self-explanatory.
+- **`criteria`** accepts either a plain string or a `{what, not_for?, examples?}` object
+  per choice. Use the structured form when the criteria need boundaries (the `not_for`
+  field) or concrete examples (the `examples` array) to pin down coverage; use the plain
+  string form for simple questions where each criterion is self-evident from its name.
+  The Jev HTTP wire shape is always flat strings — structured forms are flattened at the
+  request boundary, so the model sees the same thing either way.
 
 Three things to know about `diagnostics`:
 

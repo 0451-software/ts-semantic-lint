@@ -21,6 +21,9 @@ export {
 export {
   type Question,
   type ChoiceQuestion,
+  type ChoiceQuestionInput,
+  type ChoiceCriterionInput,
+  type InstructionsInput,
   type ChoiceType,
   type Request,
   type Response,
@@ -32,6 +35,9 @@ export {
   validateResponse,
   ResponseValidationError,
   toSharedAnswer,
+  toWireQuestion,
+  normalizeInstructions,
+  normalizeCriterion,
 } from "./types.js";
 
 export {

@@ -29,6 +29,12 @@ import {
   RuleIdSchema,
 } from "./schemas.js";
 
+import {
+  normalizeInstructions,
+  normalizeCriterion,
+  toWireQuestion,
+} from "../jev/types.js";
+
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 
@@ -415,6 +421,305 @@ describe("discover", () => {
     await expect(discover(join(scratchDir, "src"))).rejects.toThrow(
       /no ts-semantic-lint\.json found/,
     );
+  });
+});
+
+// ─── Structured criteria + instructions (feat-structured-criteria) ──────────
+
+describe("structured criteria and instructions", () => {
+  // Build a minimal config that exercises the new shape without relying
+  // on disk fixtures — keeps the new test surface self-contained.
+  function buildStructuredConfig(): object {
+    return {
+      version: 1,
+      rules: [
+        {
+          id: "structured-rule",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: {
+              question: "Is this a clear question?",
+              focus: "Judge clarity, not correctness.",
+              inspect: "`name`, `body`",
+            },
+            criteria: {
+              clear: {
+                what: "The reader can act on it without follow-up questions.",
+                not_for: "Edge cases where correctness matters more than clarity.",
+                examples: ["Adds two integers", "Returns the user's age"],
+              },
+              unclear: {
+                what: "The reader would need to ask follow-up questions.",
+              },
+            },
+          },
+          diagnostics: [
+            { when: { choice: "unclear" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("accepts structured instructions (object form)", async () => {
+    const cfgPath = await writeConfig(
+      scratchDir,
+      "ts-semantic-lint.json",
+      buildStructuredConfig(),
+    );
+    const cfg = await load(cfgPath);
+    const rule = cfg.rules.get("structured-rule");
+    expect(rule).toBeDefined();
+    const instructions = rule?.definition.question.instructions;
+    expect(typeof instructions).toBe("object");
+    if (typeof instructions !== "string") {
+      expect(instructions.question).toBe("Is this a clear question?");
+      expect(instructions.focus).toBe("Judge clarity, not correctness.");
+      expect(instructions.inspect).toBe("`name`, `body`");
+    }
+  });
+
+  it("accepts flat-string instructions (backwards-compat)", async () => {
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "flat-instr",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: "plain string instructions",
+            criteria: { a: "alpha", b: "beta" },
+          },
+          diagnostics: [
+            { when: { choice: "a" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
+    const cfg = await load(cfgPath);
+    const rule = cfg.rules.get("flat-instr");
+    expect(rule?.definition.question.instructions).toBe(
+      "plain string instructions",
+    );
+  });
+
+  it("accepts criterion as a plain string (backwards-compat)", async () => {
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "flat-crit",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { yes: "A direct impl", no: "Indirection exists" },
+          },
+          diagnostics: [
+            { when: { choice: "no" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
+    const cfg = await load(cfgPath);
+    const criteria = cfg.rules.get("flat-crit")?.definition.question.criteria;
+    expect(criteria?.["yes"]).toBe("A direct impl");
+    expect(criteria?.["no"]).toBe("Indirection exists");
+  });
+
+  it("accepts criterion as { what, not_for, examples } (structured form)", async () => {
+    const cfgPath = await writeConfig(
+      scratchDir,
+      "ts-semantic-lint.json",
+      buildStructuredConfig(),
+    );
+    const cfg = await load(cfgPath);
+    const criteria = cfg.rules.get("structured-rule")?.definition.question
+      .criteria;
+    expect(criteria).toBeDefined();
+    const clear = criteria?.["clear"];
+    expect(typeof clear).toBe("object");
+    if (typeof clear !== "string" && clear !== undefined) {
+      expect(clear.what).toBe(
+        "The reader can act on it without follow-up questions.",
+      );
+      expect(clear.not_for).toBe(
+        "Edge cases where correctness matters more than clarity.",
+      );
+      expect(clear.examples).toEqual(["Adds two integers", "Returns the user's age"]);
+    }
+  });
+
+  it("rejects a criterion object missing 'what'", async () => {
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "bad-crit",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: {
+              // missing required "what" field — must reject
+              bad: { not_for: "no what here" } as unknown as string,
+              ok: "fine",
+            },
+          },
+          diagnostics: [
+            { when: { choice: "ok" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
+    await expect(load(cfgPath)).rejects.toThrow();
+  });
+
+  it("rejects a criterion object with unknown keys (strict mode)", async () => {
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "unknown-key",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: {
+              bad: {
+                what: "valid",
+                unrelated_field: "should be rejected",
+              } as unknown as string,
+              ok: "fine",
+            },
+          },
+          diagnostics: [
+            { when: { choice: "ok" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
+    await expect(load(cfgPath)).rejects.toThrow();
+  });
+
+  it("rejects structured instructions missing 'question'", async () => {
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "bad-instr",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: { focus: "no question field" } as unknown as string,
+            criteria: { a: "alpha", b: "beta" },
+          },
+          diagnostics: [
+            { when: { choice: "a" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
+    await expect(load(cfgPath)).rejects.toThrow();
+  });
+
+  it("accepts a mix of string and structured criteria in the same question", async () => {
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "mixed",
+          where: { kind: "function", files: [], exclude: [] },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: {
+              flat: "A direct impl",
+              structured: {
+                what: "Indirection without payoff.",
+                not_for: "Cases where indirection is required.",
+              },
+            },
+          },
+          diagnostics: [
+            { when: { choice: "structured" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
+    const cfg = await load(cfgPath);
+    const criteria = cfg.rules.get("mixed")?.definition.question.criteria;
+    expect(criteria?.["flat"]).toBe("A direct impl");
+    const s = criteria?.["structured"];
+    expect(typeof s).toBe("object");
+  });
+});
+
+// ─── toWireQuestion (boundary normalizer) ───────────────────────────────────
+
+describe("toWireQuestion — boundary normalization", () => {
+  it("passes a string instructions through unchanged", () => {
+    expect(normalizeInstructions("Plain question")).toBe("Plain question");
+  });
+
+  it("flattens object instructions to a single string", () => {
+    const out = normalizeInstructions({
+      question: "Q?",
+      focus: "clarity",
+      inspect: "`name`",
+    });
+    expect(out).toContain("Q?");
+    expect(out).toContain("clarity");
+    expect(out).toContain("`name`");
+  });
+
+  it("flattens object instructions without focus/inspect", () => {
+    const out = normalizeInstructions({ question: "Just a question." });
+    expect(out).toBe("Just a question.");
+  });
+
+  it("passes a string criterion through unchanged", () => {
+    expect(normalizeCriterion("A direct impl")).toBe("A direct impl");
+  });
+
+  it("flattens object criterion (what only)", () => {
+    expect(normalizeCriterion({ what: "Indirection without payoff." })).toBe(
+      "Indirection without payoff.",
+    );
+  });
+
+  it("flattens object criterion with what + not_for + examples", () => {
+    const out = normalizeCriterion({
+      what: "Indirection without payoff.",
+      not_for: "Required indirection.",
+      examples: ["Boolean flag with two near-identical branches"],
+    });
+    expect(out).toContain("Indirection without payoff.");
+    expect(out).toContain("Required indirection.");
+    expect(out).toContain("Boolean flag");
+  });
+
+  it("toWireQuestion produces a wire-shape Question with flat strings", () => {
+    const wire = toWireQuestion({
+      type: "choice",
+      instructions: {
+        question: "Q?",
+        focus: "f",
+        inspect: "i",
+      },
+      criteria: {
+        yes: { what: "good", not_for: "edge cases" },
+        no: "bad",
+      },
+    });
+    expect(wire.type).toBe("choice");
+    expect(typeof wire.instructions).toBe("string");
+    expect(wire.instructions).toContain("Q?");
+    expect(typeof wire.criteria["yes"]).toBe("string");
+    expect(wire.criteria["yes"]).toContain("good");
+    expect(wire.criteria["no"]).toBe("bad");
   });
 });
 
