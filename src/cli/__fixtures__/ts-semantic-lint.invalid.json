@@ -1,0 +1,8 @@
+{
+  "$schema": "./ts-semantic-lint.schema.json",
+  "version": 1,
+  "model": "jev-latest",
+  "include": ["**/*.ts"],
+  "rules": [],
+  "unexpected": true
+}
