@@ -181,15 +181,17 @@ describe("runCli", () => {
     expect(buffer.stderr.text()).toContain("ts-semantic-lint:");
   });
 
-  it("--dry-run exits 2 with a clear stderr message (runner not merged yet)", async () => {
+  it("--dry-run exits 0 with the request plan on stdout", async () => {
     const code = await runCli(
       runArgs({
         argv: ["--dry-run", "--config", VALID_CONFIG],
         streams: buffer.streams,
       }),
     );
-    expect(code).toBe(ExitCode.OperationalError);
-    expect(buffer.stderr.text()).toMatch(/runner module/i);
+    expect(code).toBe(ExitCode.Success);
+    // Stdout is a JSON plan — the runner is merged, so --dry-run now works.
+    const parsed: unknown = JSON.parse(buffer.stdout.text());
+    expect(parsed).toMatchObject({ requests: expect.any(Array), targets: expect.any(Number) });
   });
 
   it("default lint path with no jev_key exits 2 with a clear stderr message", async () => {

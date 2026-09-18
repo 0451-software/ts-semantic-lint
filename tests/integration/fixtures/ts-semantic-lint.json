@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "model": "jev-latest",
+  "include": ["**/*.ts"],
+  "rules": [
+    {
+      "id": "function-simplicity",
+      "where": { "kind": "function", "has_body": true },
+      "context": "enclosing",
+      "question": {
+        "type": "choice",
+        "instructions": "Is this TypeScript function appropriately simple for its purpose? Judge avoidable complexity — branching, indirection, or bookkeeping that obscures the work. Length alone is not complexity.",
+        "criteria": {
+          "simple": "Each line carries its weight. Any branching or indirection is justified by the function's responsibility. Not for long functions whose length is justified by their responsibility (parsers, formatters, validators with many cases).",
+          "needlessly_complex": "There is avoidable branching, indirection, or bookkeeping that a clearer version of the same function would not need. Examples: a boolean flag that selects between two near-identical branches; an intermediate variable that holds a value used exactly once on the next line; defensive null checks for values that the type system has already excluded.",
+          "insufficient_context": "Without the file's surrounding code, the call sites, or the spec, this judgment can't be made reliably."
+        }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "needlessly_complex", "min_confidence": 0.5 },
+          "level": "warn",
+          "message": "Consider whether {name} can express its work more directly."
+        }
+      ]
+    },
+    {
+      "id": "comment-value",
+      "where": { "kind": "function", "has_body": true },
+      "context": "enclosing",
+      "question": {
+        "type": "choice",
+        "instructions": "Does the JSDoc on this function add information beyond what the signature and body already convey? Comments that restate the name, restate parameter types, narrate the obvious, or are stale are noise.",
+        "criteria": {
+          "useful": "The comment captures intent, invariants, edge cases, units, ordering guarantees, preconditions, postconditions, or rationale that the code does not already express. Examples: an exclusivity or inclusivity bound that the type signature cannot express; a reason a workaround is in place; a non-obvious invariant the function depends on.",
+          "noise": "The comment restates the function name, paraphrases parameter types, narrates what the code obviously does, or is stale / wrong. Examples: 'Adds two numbers' on `add(a, b)`; a `@param a the first number` block that says nothing the signature didn't; a TODO that refers to a fixed bug.",
+          "insufficient_context": "Without seeing the function's callers or the surrounding code, this judgment can't be made reliably."
+        }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "noise", "min_confidence": 0.5 },
+          "level": "warn",
+          "message": "Comment on {name} restates the obvious or adds no information."
+        }
+      ]
+    },
+    {
+      "id": "error-handling-completeness",
+      "where": { "kind": "function", "has_body": true },
+      "context": "enclosing",
+      "question": {
+        "type": "choice",
+        "instructions": "Does this function handle errors in a way that's appropriate for its role and contract? Consider whether thrown errors or rejected promises are caught at the right level, propagated with context, or silently swallowed. Silently swallowing errors is almost always wrong.",
+        "criteria": {
+          "appropriate": "Errors are caught at the boundary that knows enough to handle them, propagated with context, or rethrown deliberately. No silent swallowing.",
+          "swallowed": "A catch block, .catch(), or Promise rejection handler exists only to suppress the error — logging nothing, rethrowing nothing, and returning a default that hides the failure. Examples: `try { ... } catch (e) {}`; `.catch(() => {})` on a fetch without a comment explaining why; returning `null` / `[]` / `false` inside a catch without surfacing the failure.",
+          "insufficient_context": "Without seeing the function's callers, the right level for error handling can't be determined."
+        }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "swallowed", "min_confidence": 0.5 },
+          "level": "warn",
+          "message": "Errors are being silently swallowed in {name}; either handle them or propagate with context."
+        }
+      ]
+    }
+  ]
+}

@@ -22,13 +22,13 @@ import type { CommandContext, CliOptions } from "../options.js";
  * function without taking a hard dependency.
  */
 type RunnerFn = (
-  files: readonly { readonly path: string; readonly text: string }[],
+  files: readonly string[],
   options: RunnerOptions,
 ) => Promise<RunnerReport>;
 
 interface RunnerOptions {
   readonly config: unknown;
-  readonly jevClient?: unknown;
+  readonly client?: unknown;
   readonly jobs: number;
   readonly errorsOnly: boolean;
 }
@@ -43,8 +43,12 @@ interface RunnerReport {
  */
 type OutputRenderFn = (
   diagnostics: readonly unknown[],
-  options: { readonly format: "text" | "json"; readonly color: "auto" | "always" | "never"; readonly stream: { write(s: string): boolean } },
-) => Promise<void> | void;
+  options: {
+    readonly format: "text" | "json";
+    readonly color: "auto" | "always" | "never";
+    readonly errorsOnly?: boolean;
+  },
+) => { readonly stdout: string } | Promise<{ readonly stdout: string }>;
 
 export async function runLint(
   ctx: CommandContext,
@@ -80,22 +84,24 @@ export async function runLint(
   const jevClient = new JevClient({ key: ctx.env.jev_key });
 
   try {
-    const report = await runnerFn([], {
+    const report = await runnerFn(opts.paths, {
       config,
-      jevClient,
+      client: jevClient,
       jobs: opts.jobs,
       errorsOnly: opts.errorsOnly,
     });
     const exitCode = computeExitCode(report, opts);
     const render = await tryLoadOutputRender();
     if (render) {
-      const stream =
-        opts.format === "json" ? ctx.streams.stdout : ctx.streams.stdout;
-      await render(report.diagnostics, {
+      const rendered = await render(report.diagnostics, {
         format: opts.format,
         color: opts.color,
-        stream,
+        errorsOnly: opts.errorsOnly,
       });
+      ctx.streams.stdout.write(rendered.stdout);
+      if (!rendered.stdout.endsWith("\n")) {
+        ctx.streams.stdout.write("\n");
+      }
     } else if (opts.format === "json") {
       ctx.streams.stdout.write(
         `${JSON.stringify(

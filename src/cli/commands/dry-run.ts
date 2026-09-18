@@ -24,8 +24,8 @@ import type { CommandContext, CliOptions } from "../options.js";
  * CLI at startup — only at the moment `--dry-run` actually needs it.
  */
 type BuildRequestsFn = (
-  config: unknown,
   paths: readonly string[],
+  config: unknown,
 ) => Promise<unknown>;
 
 interface RunnerModule {
@@ -68,7 +68,7 @@ export async function runDryRun(
   }
 
   try {
-    const plan = await buildRequests(config, opts.paths);
+    const plan = await buildRequests(opts.paths, config);
     ctx.streams.stdout.write(`${JSON.stringify(plan, null, 2)}\n`);
     return ExitCode.Success;
   } catch (error) {
