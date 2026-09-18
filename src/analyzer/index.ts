@@ -304,12 +304,37 @@ function nodeToTarget(
   if (generics !== undefined) {
     target.generics = generics;
   }
+  // Set `hasBody` on function-like targets so the matcher can filter by
+  // `where: { has_body: true }`. The convention is `true` for any node
+  // whose AST carries a non-null `body` (function declarations,
+  // arrow functions, methods); `false` for ambient declarations
+  // (`TSDeclareFunction`) and other body-less constructs.
+  target.hasBody = readHasBody(node);
   // The `state` field is the rich JSON payload we send to Jev. It is not
   // part of `LintedTarget` directly, so we attach it as a custom field via
   // a type assertion. Consumers that want it can read `target.state as
   // Record<string, unknown>`.
   (target as { state?: unknown }).state = state;
   return target as unknown as LintedTarget;
+}
+
+/**
+ * Read whether the AST node carries a non-null `body`. Covers every
+ * function-shaped node in typescript-estree (FunctionDeclaration,
+ * FunctionExpression, ArrowFunctionExpression, MethodDefinition,
+ * TSDeclareFunction). Non-function nodes fall through to `false`.
+ */
+function readHasBody(node: TSESTree.Node): boolean {
+  switch (node.type) {
+    case "FunctionDeclaration":
+    case "FunctionExpression":
+    case "ArrowFunctionExpression":
+    case "MethodDefinition":
+    case "TSDeclareFunction":
+      return (node as unknown as { body?: unknown }).body != null;
+    default:
+      return false;
+  }
 }
 
 /**
@@ -470,6 +495,7 @@ interface MutableTarget {
   declarationStart?: LintedTarget["declarationStart"];
   generics?: string;
   whereClause?: string;
+  hasBody?: boolean;
 }
 
 // Re-exports so consumers can import the analyzer's pieces from a single
