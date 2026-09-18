@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "extends": ["./mid.json"],
+  "model": "leaf-model",
+  "rules": [
+    {
+      "id": "leaf-rule",
+      "where": { "kind": "interface" },
+      "question": {
+        "type": "choice",
+        "instructions": "is the interface documented?",
+        "criteria": { "ok": "yes", "bad": "no" }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "bad" },
+          "level": "warn",
+          "message": "add documentation"
+        }
+      ]
+    },
+    {
+      "id": "shared-rule",
+      "where": { "kind": "function" },
+      "question": {
+        "type": "choice",
+        "instructions": "is it ok?",
+        "criteria": { "ok": "fine", "bad": "broken" }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "bad" },
+          "level": "error",
+          "message": "leaf overrides base message"
+        }
+      ]
+    }
+  ]
+}

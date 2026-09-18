@@ -1,0 +1,16 @@
+{
+  "id": "single-rule",
+  "where": { "kind": "function" },
+  "question": {
+    "type": "choice",
+    "instructions": "is the function documented?",
+    "criteria": { "yes": "yes", "no": "no" }
+  },
+  "diagnostics": [
+    {
+      "when": { "choice": "no" },
+      "level": "warn",
+      "message": "add docs"
+    }
+  ]
+}

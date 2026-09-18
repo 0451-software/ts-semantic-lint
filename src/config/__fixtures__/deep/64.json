@@ -1,0 +1,1 @@
+{"version": 1, "rules": [{"id":"x","where":{"kind":"function"},"question":{"type":"choice","instructions":"x","criteria":{"a":"a","b":"b"}},"diagnostics":[{"when":{"choice":"a"},"level":"warn","message":"x"}]}]}
