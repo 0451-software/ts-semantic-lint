@@ -82,20 +82,67 @@ export const SelectorSchema = z
 // ─── Question ────────────────────────────────────────────────────────────────
 
 /**
+ * Structured `instructions` — the Jev best-practice shape for prompts that
+ * point at a specific field or add a focus clause. Either form (plain
+ * string or object) is accepted; the runner flattens to a single string
+ * at the HTTP-boundary so the wire payload stays string-only.
+ *
+ * `question` is the actual instructions text. `focus` (when present)
+ * narrows what the model should weigh. `inspect` (when present) names
+ * the state fields the model should read first.
+ *
+ * See `references/primitives.md` ("Structured `instructions`") in the
+ * typesafe-ai skill for rationale.
+ */
+export const StructuredInstructionsSchema = z
+  .object({
+    question: z.string().min(1).transform((s) => s.trim()).refine(
+      (s) => s.length > 0,
+      { message: "question must not be empty" },
+    ),
+    focus: z.string().optional(),
+    inspect: z.string().optional(),
+  })
+  .strict();
+
+/**
+ * Structured criterion — the Jev best-practice shape for near-options
+ * that need `what` / `not_for` / `examples` to pin down coverage. The
+ * plain-string form is still accepted for backwards compatibility.
+ *
+ * See `references/primitives.md` ("Structured `criteria`") in the
+ * typesafe-ai skill for rationale.
+ */
+export const ChoiceCriterionSchema = z.union([
+  z.string().min(1),
+  z
+    .object({
+      what: z.string().min(1),
+      not_for: z.string().optional(),
+      examples: z.array(z.string().min(1)).optional(),
+    })
+    .strict(),
+]);
+
+/**
  * A single choice question sent to Jev. 2–255 non-empty criteria.
- * Instructions must be non-empty after trimming.
+ * Instructions must be non-empty after trimming (either as a plain
+ * string, or via the `question` field of the structured form).
  */
 export const ChoiceQuestionSchema = z
   .object({
     type: z.literal("choice"),
-    instructions: z
-      .string()
-      .transform((s) => s.trim())
-      .refine((s) => s.length > 0, {
-        message: "question instructions must not be empty",
-      }),
+    instructions: z.union([
+      z
+        .string()
+        .transform((s) => s.trim())
+        .refine((s) => s.length > 0, {
+          message: "question instructions must not be empty",
+        }),
+      StructuredInstructionsSchema,
+    ]),
     criteria: z
-      .record(z.string().min(1), z.string().min(1))
+      .record(z.string().min(1), ChoiceCriterionSchema)
       .refine(
         (c) => {
           const n = Object.keys(c).length;

@@ -18,7 +18,11 @@ import {
   InputContextSchema,
   type RuleInput,
 } from "../config/schemas.js";
-import type { Question, Request as JevRequest } from "../jev/types.js";
+import {
+  toWireQuestion,
+  type Question,
+  type Request as JevRequest,
+} from "../jev/types.js";
 import type {
   LintedTarget,
   RuleContext,
@@ -93,10 +97,12 @@ function buildRequest(
   for (const target of targets) {
     state[targetKey(target)] = targetState(target);
   }
-  // The Zod-inferred question has the same shape as the Jev `Question`
-  // interface, but the two are structurally identical — assert at the
-  // boundary so downstream code uses the canonical type.
-  const question: Question = rule.question;
+  // The config holds the structured form of the question (string | object
+  // for `instructions`; string | object for each criterion). The Jev HTTP
+  // body requires flat strings, so we flatten at the boundary — leaving
+  // the config holding the structured form for clarity and editability.
+  // See `toWireQuestion` in `src/jev/types.ts` for the flatten rules.
+  const question: Question = toWireQuestion(rule.question);
   const questions: Readonly<Record<string, Question>> = {
     [rule.id]: question,
   };

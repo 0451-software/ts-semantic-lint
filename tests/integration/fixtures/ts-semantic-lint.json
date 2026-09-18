@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "model": "jev-latest",
+  "include": ["**/*.ts"],
+  "rules": [
+    {
+      "id": "function-simplicity",
+      "where": { "kind": "function", "has_body": true },
+      "context": "enclosing",
+      "question": {
+        "type": "choice",
+        "instructions": {
+          "question": "Is this TypeScript function appropriately simple for its purpose?",
+          "inspect": "`name`, `signature`, `body`",
+          "focus": "Judge avoidable complexity — branching, indirection, or bookkeeping that obscures the work. Length alone is not complexity."
+        },
+        "criteria": {
+          "simple": {
+            "what": "Each line carries its weight. Any branching or indirection is justified by the function's responsibility.",
+            "not_for": "Long functions whose length is justified by their responsibility (parsers, formatters, validators with many cases)."
+          },
+          "needlessly_complex": {
+            "what": "There is avoidable branching, indirection, or bookkeeping that a clearer version of the same function would not need.",
+            "examples": [
+              "A boolean flag that selects between two near-identical branches",
+              "An intermediate variable that holds a value used exactly once on the next line",
+              "Defensive null checks for values that the type system has already excluded"
+            ]
+          },
+          "insufficient_context": {
+            "what": "Without the file's surrounding code, the call sites, or the spec, this judgment can't be made reliably."
+          }
+        }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "needlessly_complex", "min_confidence": 0.5 },
+          "level": "warn",
+          "message": "Consider whether {name} can express its work more directly."
+        }
+      ]
+    },
+    {
+      "id": "comment-value",
+      "where": { "kind": "function", "has_body": true },
+      "context": "enclosing",
+      "question": {
+        "type": "choice",
+        "instructions": {
+          "question": "Does the JSDoc on this function add information beyond what the signature and body already convey?",
+          "inspect": "`name`, `signature`, `docs`",
+          "focus": "Comments that restate the name, restate parameter types, narrate the obvious, or are stale are noise."
+        },
+        "criteria": {
+          "useful": {
+            "what": "The comment captures intent, invariants, edge cases, units, ordering guarantees, preconditions, postconditions, or rationale that the code does not already express.",
+            "examples": [
+              "An exclusivity or inclusivity bound that the type signature cannot express",
+              "A reason a workaround is in place",
+              "A non-obvious invariant the function depends on"
+            ]
+          },
+          "noise": {
+            "what": "The comment restates the function name, paraphrases parameter types, narrates what the code obviously does, or is stale / wrong.",
+            "examples": [
+              "'Adds two numbers' on `add(a, b)`",
+              "A `@param a the first number` block that says nothing the signature didn't",
+              "A TODO that refers to a fixed bug"
+            ]
+          },
+          "insufficient_context": {
+            "what": "Without seeing the function's callers or the surrounding code, this judgment can't be made reliably."
+          }
+        }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "noise", "min_confidence": 0.5 },
+          "level": "warn",
+          "message": "Comment on {name} restates the obvious or adds no information."
+        }
+      ]
+    },
+    {
+      "id": "error-handling-completeness",
+      "where": { "kind": "function", "has_body": true },
+      "context": "enclosing",
+      "question": {
+        "type": "choice",
+        "instructions": {
+          "question": "Does this function handle errors in a way that's appropriate for its role and contract?",
+          "inspect": "`name`, `signature`, `body`",
+          "focus": "Consider whether thrown errors or rejected promises are caught at the right level, propagated with context, or silently swallowed. Silently swallowing errors is almost always wrong."
+        },
+        "criteria": {
+          "appropriate": {
+            "what": "Errors are caught at the boundary that knows enough to handle them, propagated with context, or rethrown deliberately. No silent swallowing."
+          },
+          "swallowed": {
+            "what": "A catch block, .catch(), or Promise rejection handler exists only to suppress the error — logging nothing, rethrowing nothing, and returning a default that hides the failure.",
+            "examples": [
+              "`try { ... } catch (e) {}`",
+              "`.catch(() => {})` on a fetch without a comment explaining why",
+              "Returning `null` / `[]` / `false` inside a catch without surfacing the failure"
+            ]
+          },
+          "insufficient_context": {
+            "what": "Without seeing the function's callers, the right level for error handling can't be determined."
+          }
+        }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "swallowed", "min_confidence": 0.5 },
+          "level": "warn",
+          "message": "Errors are being silently swallowed in {name}; either handle them or propagate with context."
+        }
+      ]
+    }
+  ]
+}
