@@ -1,0 +1,34 @@
+[
+  {
+    "id": "array-rule-1",
+    "where": { "kind": "function" },
+    "question": {
+      "type": "choice",
+      "instructions": "is the function pure?",
+      "criteria": { "yes": "yes", "no": "no" }
+    },
+    "diagnostics": [
+      {
+        "when": { "choice": "no" },
+        "level": "warn",
+        "message": "consider making it pure"
+      }
+    ]
+  },
+  {
+    "id": "array-rule-2",
+    "where": { "kind": "class" },
+    "question": {
+      "type": "choice",
+      "instructions": "is the class small?",
+      "criteria": { "yes": "yes", "no": "no" }
+    },
+    "diagnostics": [
+      {
+        "when": { "choice": "no" },
+        "level": "warn",
+        "message": "split this class"
+      }
+    ]
+  }
+]

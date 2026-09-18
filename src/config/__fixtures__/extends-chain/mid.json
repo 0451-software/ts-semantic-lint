@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "extends": ["./base.json"],
+  "rules": [
+    {
+      "id": "mid-rule",
+      "where": { "kind": "class" },
+      "question": {
+        "type": "choice",
+        "instructions": "is the class well-named?",
+        "criteria": { "ok": "yes", "bad": "no" }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "bad" },
+          "level": "warn",
+          "message": "rename this class"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "./ts-semantic-lint.schema.json",
+  "version": 1,
+  "model": "base-model",
+  "rules": [
+    {
+      "id": "shared-rule",
+      "where": { "kind": "function" },
+      "question": {
+        "type": "choice",
+        "instructions": "is it ok?",
+        "criteria": { "ok": "fine", "bad": "broken" }
+      },
+      "diagnostics": [
+        {
+          "when": { "choice": "bad" },
+          "level": "warn",
+          "message": "from base"
+        }
+      ]
+    }
+  ]
+}
