@@ -24,6 +24,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:integration": "vitest run tests/integration",
     "clean": "rm -rf dist *.tsbuildinfo",
     "prepack": "npm run clean && npm run build"
   },
