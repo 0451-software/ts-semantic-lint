@@ -1,0 +1,41 @@
+name: integration
+
+on:
+  workflow_dispatch:        # manual trigger — full control
+  schedule:
+    - cron: '0 8 * * 1'     # Mondays 08:00 UTC — weekly cost-controlled run
+
+# Cancel previous in-progress runs when a new one is dispatched
+concurrency:
+  group: integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Live integration tests
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: npm run test:integration
