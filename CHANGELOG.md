@@ -20,6 +20,14 @@ follow-up card owns which migration.
   traversal, or the dev-server CSRF advisory. Remaining advisories: 0
   (`pnpm audit --audit-level high` exits 0). Also added `vite` and `vitest@5`
   directly to devDependencies; vitest 5 requires `vite@^6.4.0 || ^7 || ^8`.
+- Bump `undici` from `^7.2.0` to `^8.11.0` and bump `engines.node` from
+  `>=22.12.0` to `>=22.19.0` (second engines bump; commander 15 was the first).
+  undici 8 enables HTTP/2 by default (`allowH2: true`) and removes legacy
+  handler wrappers, but keeps `Agent({ connectTimeout })`, `fetch`, and the
+  `dispatcher` fetch-init option backward-compatible. `src/jev/client.ts` only
+  uses `new Agent({ connectTimeout })` and `fetch(..., { dispatcher })` —
+  no source changes required. README Node badge + 2 text references updated
+  to "Node 22.19 or newer".
 
 ### Dependency upgrades
 
@@ -56,7 +64,11 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | `eslint` | `^9.18.0` → `^10.11.0` | Requires ESLint v9 flat-config (`eslint.config.mjs`) first; today the repo has none and the lint gate is disabled (`lint_enabled: false` on the caller). Bumping ESLint without a flat config would break the gate the moment someone re-enables it. | t_ef1f39fa follow-up #1 |
 | `typescript` | `^5.9.3` → `^7.0.2` | `@typescript-eslint/typescript-estree@8.70.1` peer dep is `typescript: ">=4.8.4 <6.1.0"`. The typescript-estree parser is a direct dep used at compile time by `src/analyzer/`. Bumping typescript past 6.x requires either waiting for `@typescript-eslint` to ship a major that lifts the peer cap (likely v9) or replacing typescript-estree with `typescript` itself as the parser (substantial analyzer rewrite). | t_ef1f39fa follow-up #2 |
 | `zod` | `^3.24.1` → `^4.6.5` | `zod-to-json-schema@3.25.2` is **deprecated as of Nov 2025** (its README now recommends Zod 4's native `z.toJSONSchema()`) and only accepts Zod v3 schemas via `zod/v3` even when Zod v4 is in deps. `src/config/json-schema.ts` would have to switch to native `z.toJSONSchema()`. Zod 4 also has breaking changes in error customization, `z.record` (one-arg dropped), `.strict()` (deprecated), `.format()`/`.flatten()` (deprecated), `ZodError.issues` shape, and `.nonempty()` (deprecated). | t_ef1f39fa follow-up #3 |
-| `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.12.0` via commander 15, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.12.0`. | t_ef1f39fa follow-up #4 |
+| `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.12.0` via commander 15, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.12.0`. | landed in this follow-up card |
+
+**Closed by this card (landed):**
+
+- `undici` 7→8 (follow-up #4 from t_ef1f39fa): landed via PR for t_652954d6.
 
 ### CI
 
@@ -66,8 +78,8 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
   above land individually. The freshness gate still **runs** and reports the
   outdated table — it just emits an advisory notice instead of a hard fail.
   The comment block above the input explains the deferral plan and lists the
-  follow-up cards. Remove `fail_on_outdated: false` once all four deferred
-  cards above have landed and `pnpm outdated --format json` is empty.
+  follow-up cards. Remove `fail_on_outdated: false` once the remaining three
+  deferred cards above have landed and `pnpm outdated --format json` is empty.
 - Also passes `frozen_lockfile: false` for this PR so the commander 12→15
   cross-major bump can regenerate `pnpm-lock.yaml` in CI. Restore the default
   of `true` once the lockfile is back in sync.

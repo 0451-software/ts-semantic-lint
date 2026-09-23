@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.19.0"
   },
   "packageManager": "pnpm@10.0.0",
   "bin": {
@@ -34,7 +34,7 @@
     "commander": "^15.0.0",
     "ignore": "^7.0.10",
     "tinyglobby": "^0.2.17",
-    "undici": "^7.2.0",
+    "undici": "^8.11.0",
     "zod": "^3.24.1",
     "zod-to-json-schema": "^3.25.2"
   },
