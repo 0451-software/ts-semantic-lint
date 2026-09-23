@@ -10,6 +10,17 @@ follow-up card owns which migration.
 
 ## [Unreleased]
 
+### Security
+
+- Bump `vitest` from `2.1.9` to `5.0.1` to clear 6 of 7 outstanding security
+  advisories surfaced by `pnpm audit` on CI (PR #17). `vite` is now pinned to
+  `^6.4.3` and `esbuild` to `^0.25.0` via `pnpm.overrides` so vitest's
+  transitive `vite@5.4.21` no longer carries the `server.fs.deny` bypass, the
+  `launch-editor` NTLMv2 hash disclosure, the optimized-deps `.map` path
+  traversal, or the dev-server CSRF advisory. Remaining advisories: 0
+  (`pnpm audit --audit-level high` exits 0). Also added `vite` and `vitest@5`
+  directly to devDependencies; vitest 5 requires `vite@^6.4.0 || ^7 || ^8`.
+
 ### Dependency upgrades
 
 Per-major decision matrix (background: PR #16 surfaced 15 outdated direct deps
@@ -30,6 +41,7 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | `tsx` | `^4.19.2` | `^4.23.15` | Patch-level. |
 | `tinyglobby` | `^0.2.10` | `^0.2.17` | Patch-level. |
 | `ignore` | `^7.0.0` | `^7.0.10` | Patch-level. |
+| `vitest` | `^2.1.8` | `^5.0.0` | Merged from PR #17 (security advisory clearance); adds `vite@^6.4.3` direct dep + `pnpm.overrides` pinning `vite` and `esbuild`. |
 
 **Deferred to follow-up cards (option c in the body of t_ef1f39fa):**
 
@@ -39,12 +51,6 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | `typescript` | `^5.9.3` → `^7.0.2` | `@typescript-eslint/typescript-estree@8.70.1` peer dep is `typescript: ">=4.8.4 <6.1.0"`. The typescript-estree parser is a direct dep used at compile time by `src/analyzer/`. Bumping typescript past 6.x requires either waiting for `@typescript-eslint` to ship a major that lifts the peer cap (likely v9) or replacing typescript-estree with `typescript` itself as the parser (substantial analyzer rewrite). | t_ef1f39fa follow-up #2 |
 | `zod` | `^3.24.1` → `^4.6.5` | `zod-to-json-schema@3.25.2` is **deprecated as of Nov 2025** (its README now recommends Zod 4's native `z.toJSONSchema()`) and only accepts Zod v3 schemas via `zod/v3` even when Zod v4 is in deps. `src/config/json-schema.ts` would have to switch to native `z.toJSONSchema()`. Zod 4 also has breaking changes in error customization, `z.record` (one-arg dropped), `.strict()` (deprecated), `.format()`/`.flatten()` (deprecated), `ZodError.issues` shape, and `.nonempty()` (deprecated). | t_ef1f39fa follow-up #3 |
 | `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.12.0` via commander 15, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.12.0`. | t_ef1f39fa follow-up #4 |
-
-**Already on a separate branch (not touched in this branch):**
-
-| Package | Old → New | Branch | PR |
-| --- | --- | --- | --- |
-| `vitest` | `^2.1.8` → `^5.0.1` | `agent/bump-vitest` | #17 (security audit fixup) |
 
 ### CI
 
@@ -56,3 +62,6 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
   The comment block above the input explains the deferral plan and lists the
   follow-up cards. Remove `fail_on_outdated: false` once all four deferred
   cards above have landed and `pnpm outdated --format json` is empty.
+- Also passes `frozen_lockfile: false` for this PR so the commander 12→15
+  cross-major bump can regenerate `pnpm-lock.yaml` in CI. Restore the default
+  of `true` once the lockfile is back in sync.
