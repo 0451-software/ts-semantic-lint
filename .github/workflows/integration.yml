@@ -64,7 +64,7 @@ permissions:
 jobs:
   quality:
     name: Quality gates
-    uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1.x
+    uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
     with:
       working_directory: '.'
       node_version: '20'
