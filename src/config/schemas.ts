@@ -6,7 +6,8 @@
  * strict: unknown keys, malformed values, and missing required fields are
  * rejected with a human-readable ZodIssue path.
  *
- * The `.strict()` setting matches Rust's `#[serde(deny_unknown_fields)]`.
+ * The `z.strictObject(...)` calls replace Zod v3's `.strict()` (deprecated in
+ * Zod 4 in favor of the top-level `strictObject` factory).
  */
 import { z } from "zod";
 
@@ -14,7 +15,9 @@ import { z } from "zod";
 
 /**
  * Closed-interval probability / confidence in [0, 1]. Finite numbers only;
- * NaN / Infinity rejected.
+ * NaN / Infinity rejected. Zod 4's `z.number()` already rejects ±Infinity, so
+ * the `Number.isFinite` refine is now redundant — kept as a defense-in-depth
+ * guard so this schema still rejects NaN.
  */
 export const ProbabilitySchema = z
   .number()
@@ -65,18 +68,16 @@ export const TargetKindSchema = z.enum([
 
 // ─── Selector ────────────────────────────────────────────────────────────────
 
-export const SelectorSchema = z
-  .object({
-    kind: TargetKindSchema,
-    has_body: z.boolean().optional(),
-    has_name: z.boolean().optional(),
-    name: z.string().min(1).optional(),
-    name_pattern: z.string().min(1).optional(),
-    visibility: z.enum(["public", "private", "protected"]).optional(),
-    files: z.array(z.string().min(1)).default([]),
-    exclude: z.array(z.string().min(1)).default([]),
-  })
-  .strict();
+export const SelectorSchema = z.strictObject({
+  kind: TargetKindSchema,
+  has_body: z.boolean().optional(),
+  has_name: z.boolean().optional(),
+  name: z.string().min(1).optional(),
+  name_pattern: z.string().min(1).optional(),
+  visibility: z.enum(["public", "private", "protected"]).optional(),
+  files: z.array(z.string().min(1)).default([]),
+  exclude: z.array(z.string().min(1)).default([]),
+});
 
 // ─── Question ────────────────────────────────────────────────────────────────
 
@@ -93,17 +94,17 @@ export const SelectorSchema = z
  * See `references/primitives.md` ("Structured `instructions`") in the
  * typesafe-ai skill for rationale.
  */
-export const StructuredInstructionsSchema = z
-  .object({
-    question: z
-      .string()
-      .min(1)
-      .transform((s) => s.trim())
-      .refine((s) => s.length > 0, { message: "question must not be empty" }),
-    focus: z.string().optional(),
-    inspect: z.string().optional(),
-  })
-  .strict();
+export const StructuredInstructionsSchema = z.strictObject({
+  question: z
+    .string()
+    .min(1)
+    .transform((s) => s.trim())
+    .refine((s) => s.length > 0, {
+      message: "question must not be empty",
+    }),
+  focus: z.string().optional(),
+  inspect: z.string().optional(),
+});
 
 /**
  * Structured criterion — the Jev best-practice shape for near-options
@@ -115,13 +116,11 @@ export const StructuredInstructionsSchema = z
  */
 export const ChoiceCriterionSchema = z.union([
   z.string().min(1),
-  z
-    .object({
-      what: z.string().min(1),
-      not_for: z.string().optional(),
-      examples: z.array(z.string().min(1)).optional(),
-    })
-    .strict(),
+  z.strictObject({
+    what: z.string().min(1),
+    not_for: z.string().optional(),
+    examples: z.array(z.string().min(1)).optional(),
+  }),
 ]);
 
 /**
@@ -129,39 +128,36 @@ export const ChoiceCriterionSchema = z.union([
  * Instructions must be non-empty after trimming (either as a plain
  * string, or via the `question` field of the structured form).
  */
-export const ChoiceQuestionSchema = z
-  .object({
-    type: z.literal("choice"),
-    instructions: z.union([
-      z
-        .string()
-        .transform((s) => s.trim())
-        .refine((s) => s.length > 0, {
-          message: "question instructions must not be empty",
-        }),
-      StructuredInstructionsSchema,
-    ]),
-    criteria: z.record(z.string().min(1), ChoiceCriterionSchema).refine(
-      (c) => {
-        const n = Object.keys(c).length;
-        return n >= 2 && n <= 255;
-      },
-      { message: "a choice question requires 2 to 255 choices" },
-    ),
-  })
-  .strict();
+export const ChoiceQuestionSchema = z.strictObject({
+  type: z.literal("choice"),
+  instructions: z.union([
+    z
+      .string()
+      .transform((s) => s.trim())
+      .refine((s) => s.length > 0, {
+        message: "question instructions must not be empty",
+      }),
+    StructuredInstructionsSchema,
+  ]),
+  criteria: z.record(z.string().min(1), ChoiceCriterionSchema).refine(
+    (c) => {
+      const n = Object.keys(c).length;
+      return n >= 2 && n <= 255;
+    },
+    { message: "a choice question requires 2 to 255 choices" },
+  ),
+});
 
 export const QuestionSchema = ChoiceQuestionSchema; // v1: only Choice.
 
 // ─── Diagnostic policy + condition ───────────────────────────────────────────
 
 export const ChoiceProbabilitySchema = z
-  .object({
+  .strictObject({
     choice: z.string().min(1),
     min: ProbabilitySchema.optional(),
     max: ProbabilitySchema.optional(),
   })
-  .strict()
   .refine((v) => v.min === undefined || v.max === undefined || v.min <= v.max, {
     message: "probability min exceeds max",
     path: ["min"],
@@ -190,12 +186,16 @@ export interface ConditionInput {
 }
 
 // Internal: the lazy `Condition` schema (recursive). We type it via
-// `z.ZodTypeAny` (a Zod-provided alias) because Zod can't infer the
+// `z.ZodType` (a Zod-provided alias) because Zod can't infer the
 // optional-field match when wrapped in `z.ZodType<ConditionInput>`.
 // The cast at the bottom converts it back to the typed surface.
-const ConditionSchemaImpl: z.ZodTypeAny = z.lazy(() =>
+//
+// Zod 4's `z.ZodType` generic is now `<Output = unknown, Input = unknown>`
+// (the `Def` parameter was removed); casting to the typed surface still
+// works the same way as in Zod 3.
+const ConditionSchemaImpl: z.ZodType = z.lazy(() =>
   z
-    .object({
+    .strictObject({
       choice: z.string().min(1).optional(),
       min_confidence: ProbabilitySchema.optional(),
       max_confidence: ProbabilitySchema.optional(),
@@ -203,7 +203,6 @@ const ConditionSchemaImpl: z.ZodTypeAny = z.lazy(() =>
       all: z.array(ConditionSchemaImpl).min(1).optional(),
       any: z.array(ConditionSchemaImpl).min(1).optional(),
     })
-    .strict()
     .refine(
       (v) =>
         v.min_confidence === undefined ||
@@ -222,18 +221,16 @@ export const ConditionSchema: z.ZodType<ConditionInput> =
 
 export const DiagnosticLevelSchema = z.enum(["warn", "error"]);
 
-export const DiagnosticPolicySchema = z
-  .object({
-    when: ConditionSchema,
-    level: DiagnosticLevelSchema,
-    message: z
-      .string()
-      .transform((s) => s.trim())
-      .refine((s) => s.length > 0, {
-        message: "diagnostic message must not be empty",
-      }),
-  })
-  .strict();
+export const DiagnosticPolicySchema = z.strictObject({
+  when: ConditionSchema,
+  level: DiagnosticLevelSchema,
+  message: z
+    .string()
+    .transform((s) => s.trim())
+    .refine((s) => s.length > 0, {
+      message: "diagnostic message must not be empty",
+    }),
+});
 
 // ─── Rule ────────────────────────────────────────────────────────────────────
 
@@ -245,32 +242,33 @@ export const InputContextSchema = z
   .enum(["target", "enclosing", "file"])
   .default("enclosing");
 
-export const RuleSchema = z
-  .object({
-    $schema: z.string().optional(),
-    id: RuleIdSchema,
-    where: SelectorSchema,
-    context: InputContextSchema.optional(),
-    question: QuestionSchema,
-    diagnostics: z.array(DiagnosticPolicySchema).min(1, {
-      message: "rule needs at least one diagnostic policy",
-    }),
-  })
-  .strict();
+/**
+ * The single-rule schema. The JSON-Schema generator (`json-schema.ts`)
+ * names the emitted schema `Rule`; that naming is handled by the wrapper
+ * layer, so no per-schema registry registration is needed here.
+ */
+export const RuleSchema = z.strictObject({
+  $schema: z.string().optional(),
+  id: RuleIdSchema,
+  where: SelectorSchema,
+  context: InputContextSchema.optional(),
+  question: QuestionSchema,
+  diagnostics: z.array(DiagnosticPolicySchema).min(1, {
+    message: "rule needs at least one diagnostic policy",
+  }),
+});
 
 // ─── Override ────────────────────────────────────────────────────────────────
 
 export const RuleSettingSchema = z.enum(["off", "warn", "error"]);
 
-export const OverrideSchema = z
-  .object({
-    files: z.array(z.string().min(1)).min(1, {
-      message: "overrides require at least one file pattern",
-    }),
-    exclude: z.array(z.string().min(1)).default([]),
-    rules: z.record(z.string().min(1), RuleSettingSchema),
-  })
-  .strict();
+export const OverrideSchema = z.strictObject({
+  files: z.array(z.string().min(1)).min(1, {
+    message: "overrides require at least one file pattern",
+  }),
+  exclude: z.array(z.string().min(1)).default([]),
+  rules: z.record(z.string().min(1), RuleSettingSchema),
+});
 
 // ─── Top-level config file ───────────────────────────────────────────────────
 
@@ -279,29 +277,29 @@ export const OverrideSchema = z
  *
  * `version` defaults to 1; only 1 is accepted. All other fields are
  * optional except `rules` (must contain ≥1 rule).
+ *
+ * The JSON-Schema generator (`json-schema.ts`) names the emitted schema
+ * `ConfigFile`; that naming is handled by the wrapper layer, so no
+ * per-schema registry registration is needed here.
  */
-export const ConfigFileSchema = z
-  .object({
-    $schema: z.string().optional(),
-    version: z.literal(1).default(1),
-    extends: z.array(z.string().min(1)).default([]),
-    model: z
-      .string()
-      .transform((s) => s.trim())
-      .refine((s) => s.length > 0, { message: "model must not be empty" })
-      .optional(),
-    include: z
-      .array(z.string().min(1))
-      .nonempty({
-        message: "include must contain at least one file pattern",
-      })
-      .optional(),
-    exclude: z.array(z.string().min(1)).default([]),
-    rules: z.array(RuleSchema).default([]),
-    rule_files: z.array(z.string().min(1)).default([]),
-    overrides: z.array(OverrideSchema).default([]),
-  })
-  .strict();
+export const ConfigFileSchema = z.strictObject({
+  $schema: z.string().optional(),
+  version: z.literal(1).default(1),
+  extends: z.array(z.string().min(1)).default([]),
+  model: z
+    .string()
+    .transform((s) => s.trim())
+    .refine((s) => s.length > 0, { message: "model must not be empty" })
+    .optional(),
+  include: z
+    .array(z.string().min(1))
+    .min(1, { message: "include must contain at least one file pattern" })
+    .optional(),
+  exclude: z.array(z.string().min(1)).default([]),
+  rules: z.array(RuleSchema).default([]),
+  rule_files: z.array(z.string().min(1)).default([]),
+  overrides: z.array(OverrideSchema).default([]),
+});
 
 export type ConfigFileInput = z.infer<typeof ConfigFileSchema>;
 export type RuleInput = z.infer<typeof RuleSchema>;

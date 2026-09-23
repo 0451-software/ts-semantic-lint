@@ -13,8 +13,7 @@
  */
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -41,9 +40,6 @@ import { evaluate } from "./evaluate.js";
 import { match } from "./match.js";
 import { run, buildRequests } from "./index.js";
 import { scan } from "./scan.js";
-
-const here = fileURLToPath(new URL(".", import.meta.url));
-const fx = (rel: string): string => resolve(here, "__fixtures__", rel);
 
 let scratchDir = "";
 

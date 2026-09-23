@@ -29,12 +29,7 @@ import type { EnclosingScope, LintedTarget } from "../types.js";
 
 import { describe, declarationStartFor, nameFor } from "./describe.js";
 import { enclosingFor, type EnclosingEntry } from "./enclosing.js";
-import {
-  EXTRACTABLE_NODE_KINDS,
-  type InternalKind,
-  internalKindFor,
-  UNNAMED,
-} from "./kinds.js";
+import { type InternalKind, internalKindFor, UNNAMED } from "./kinds.js";
 import { Lines, resolveRange } from "./positions.js";
 
 /**
@@ -115,7 +110,7 @@ export function extractTargets(
     ast = parse(source, parseOptions);
   } catch (error) {
     if (error instanceof TSError) {
-      throw new SyntaxError(formatParseError(error));
+      throw new SyntaxError(formatParseError(error), { cause: error });
     }
     throw error;
   }
