@@ -47,7 +47,7 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 
 | Package | Current | Latest | Reason deferred | Follow-up card |
 | --- | --- | --- | --- | --- |
-| `vite` | `^6.4.3` | `^8.3.0` | Vitest 5 requires vite `^6.4.0 || ^7 || ^8`. Bumping to vite 8 is independent of vitest 5 itself and worth its own card so any analyzer/Vite-plugin compatibility gets checked. | t_ef1f39fa follow-up #5 |
+| ~~`vite`~~ | ~~`^6.4.3`~~ | ~~`^8.3.0`~~ | **Landed**: vitest 5.0.1 + vite 8.3.0 work end-to-end (vite 8 is the highest version vitest 5's peer `^6.4.0 || ^7 || ^8` accepts). Vite 8 ships rolldown as the production bundler, but vitest only uses vite as a module loader for `tests/integration/`, so the bundler swap is invisible here. `esbuild` override also bumped from `^0.25.0` → `^0.28.0` because vite 8's `esbuild` peer is `^0.27.0 || ^0.28.0` (esbuild@0.28.2 keeps `pnpm audit` clean). | t_aeef3911 (this card) |
 
 **Deferred to follow-up cards (option c in the body of t_ef1f39fa):**
 
@@ -72,11 +72,24 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
   cross-major bump can regenerate `pnpm-lock.yaml` in CI. Restore the default
   of `true` once the lockfile is back in sync.
 
+### [Unreleased] — vite 6 → 8 (t_aeef3911, follow-up #5 of PR #20)
+
+- Bump `vite` from `^6.4.3` to `^8.3.0` (direct devDep + `pnpm.overrides`).
+  Vite 8's `esbuild` peer is `^0.27.0 || ^0.28.0`; bump the `esbuild` override
+  from `^0.25.0` to `^0.28.0` in lockstep (no advisories at 0.28.2).
+- `pnpm outdated --format json` no longer lists `vite`. Vitest 5.0.1 + vite
+  8.3.0 are mutually compatible (vitest 5 peer is `vite: ^6.4.0 || ^7 || ^8`).
+- Verified locally: `pnpm run typecheck` → 0; `pnpm run build` → 0 (CLI
+  starts and `--help` renders). `pnpm test` runs all 207 unit tests green;
+  the 3 pre-existing live-integration failures (`t_1235e511`, requires
+  `dist/cli.js` + `TYPESAFE_API_KEY`) are unchanged.
+
 ### Acceptance — verified by PR #20 CI run
 
-- Dependency freshness gate: PASS (was FAILING on PR #16). 6 outdated deps
-  remain as advisories (the deferred majors above + the new vite 6→8 advisory
-  introduced by the vitest 5 merge).
+- Dependency freshness gate: PASS (was FAILING on PR #16). After the vite 6→8
+  bump (follow-up #5, t_aeef3911) the outdated list drops to 5: the four
+  deferred majors (eslint 9→10, typescript 5→7, zod 3→4, undici 7→8) plus
+  `@types/node 22→26` (informational, not carded).
 - Typecheck gate: PASS.
 - Build gate: PASS (commander 15 ESM-only + Node ≥22.12 holds).
 - Security audit gate: PASS (after merging vitest 2→5 from PR #17).
