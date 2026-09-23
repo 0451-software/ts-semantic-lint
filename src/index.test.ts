@@ -51,10 +51,13 @@ describe("public package entry", () => {
   });
 
   it("extractTargets + evaluateRule round-trip on a fixture", () => {
-    const src = "export function add(a: number, b: number): number { return a + b; }";
+    const src =
+      "export function add(a: number, b: number): number { return a + b; }";
     const targets = entry.extractTargets(src, "/abs/sample.ts");
     expect(targets.length).toBeGreaterThan(0);
-    const fn = targets.find((t) => t.kind === "function" || t.kind === "FunctionDeclaration");
+    const fn = targets.find(
+      (t) => t.kind === "function" || t.kind === "FunctionDeclaration",
+    );
     expect(fn).toBeDefined();
     if (!fn) throw new Error("unreachable");
     const answer: import("./types.js").JevAnswer = {

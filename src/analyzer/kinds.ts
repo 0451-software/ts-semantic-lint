@@ -40,13 +40,7 @@ export const EXTRACTABLE_NODE_KINDS: ReadonlySet<string> = new Set<string>([
 
 /** Internal canonical kind strings — what `LintedTarget.kind` will be set to. */
 export type InternalKind =
-  | "function"
-  | "class"
-  | "interface"
-  | "type"
-  | "enum"
-  | "module"
-  | "file";
+  "function" | "class" | "interface" | "type" | "enum" | "module" | "file";
 
 /**
  * Map a typescript-estree node kind to the internal kind. Returns `undefined`
@@ -81,8 +75,15 @@ export function internalKindFor(astKind: string): InternalKind | undefined {
  * Reverse map: internal kind → the typescript-estree AST node kinds we treat as
  * instances of it. Used by the analyzer's traversal filters.
  */
-export const AST_KINDS_BY_INTERNAL: Readonly<Record<InternalKind, readonly string[]>> = {
-  function: ["FunctionDeclaration", "ArrowFunctionExpression", "MethodDefinition", "TSDeclareFunction"],
+export const AST_KINDS_BY_INTERNAL: Readonly<
+  Record<InternalKind, readonly string[]>
+> = {
+  function: [
+    "FunctionDeclaration",
+    "ArrowFunctionExpression",
+    "MethodDefinition",
+    "TSDeclareFunction",
+  ],
   class: ["ClassDeclaration", "ClassExpression"],
   interface: ["TSInterfaceDeclaration"],
   type: ["TSTypeAliasDeclaration"],

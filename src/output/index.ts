@@ -57,7 +57,11 @@ function resolveColor(options: RenderOptions): ColorMode {
  * from `process.env` and `process.stdout.isTTY` for `auto` mode.
  */
 function resolveColorEnabled(mode: ColorMode): boolean {
-  return colorEnabled(mode, Boolean(process.stdout.isTTY), process.env.NO_COLOR);
+  return colorEnabled(
+    mode,
+    Boolean(process.stdout.isTTY),
+    process.env.NO_COLOR,
+  );
 }
 
 /**
@@ -89,9 +93,10 @@ export function render(
   if (options.format === "json") {
     // Summary is always over the full input list; the diagnostics field
     // reflects whatever filtering the caller asked for.
-    stdout = options.errorsOnly === true
-      ? renderJsonWithSummary(filtered, diagnostics)
-      : renderJson(diagnostics);
+    stdout =
+      options.errorsOnly === true
+        ? renderJsonWithSummary(filtered, diagnostics)
+        : renderJson(diagnostics);
   } else {
     if (filtered.length === 0) {
       stdout = EMPTY_TEXT;

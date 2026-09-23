@@ -35,7 +35,9 @@ interface IgnoreInstance {
   add(patterns: string | readonly string[]): IgnoreInstance;
   ignores(pathname: string): boolean;
 }
-const makeIgnore: IgnoreFactory = (ignore as unknown as IgnoreFactory).bind(ignore) as IgnoreFactory;
+const makeIgnore: IgnoreFactory = (ignore as unknown as IgnoreFactory).bind(
+  ignore,
+) as IgnoreFactory;
 
 // Some `LintedTarget` shapes in the wider codebase expose `hasBody`; the
 // shared type does not. Read defensively.

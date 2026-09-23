@@ -44,7 +44,9 @@ export function summarize(diagnostics: readonly Diagnostic[]): JsonSummary {
  * Produce the parsed envelope (no serialization yet). The `diagnostics`
  * field is sorted; the `summary` is computed over the same list.
  */
-export function buildJson(diagnostics: readonly Diagnostic[]): JsonRenderResult {
+export function buildJson(
+  diagnostics: readonly Diagnostic[],
+): JsonRenderResult {
   const sorted = sortDiagnostics(diagnostics);
   return {
     summary: summarize(sorted),

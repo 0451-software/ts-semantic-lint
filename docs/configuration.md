@@ -37,16 +37,16 @@ Unknown fields at every level are rejected (strict mode).
 
 All fields optional except `kind`. ANDed together; undefined = wildcard.
 
-| Field         | Type                       | Purpose                                       |
-| ------------- | -------------------------- | --------------------------------------------- |
-| `kind`        | `string`                   | AST node kind: `function`, `class`, `interface`, `type`, `enum`, `module`, `file` |
-| `has_body`    | `boolean`                  | Only meaningful for `kind: "function"`       |
-| `has_name`    | `boolean`                  | Filter named vs anonymous nodes               |
-| `name`        | `string`                   | Exact-match node name                         |
-| `name_pattern`| `string`                   | Regex tested against node name                |
-| `visibility`  | `"public" \| "private" \| "protected"` | TS access modifier            |
-| `files`       | `string[]`                 | Glob patterns — match ANY                     |
-| `exclude`     | `string[]`                 | Glob patterns — exclude if match ANY          |
+| Field          | Type                                   | Purpose                                                                           |
+| -------------- | -------------------------------------- | --------------------------------------------------------------------------------- |
+| `kind`         | `string`                               | AST node kind: `function`, `class`, `interface`, `type`, `enum`, `module`, `file` |
+| `has_body`     | `boolean`                              | Only meaningful for `kind: "function"`                                            |
+| `has_name`     | `boolean`                              | Filter named vs anonymous nodes                                                   |
+| `name`         | `string`                               | Exact-match node name                                                             |
+| `name_pattern` | `string`                               | Regex tested against node name                                                    |
+| `visibility`   | `"public" \| "private" \| "protected"` | TS access modifier                                                                |
+| `files`        | `string[]`                             | Glob patterns — match ANY                                                         |
+| `exclude`      | `string[]`                             | Glob patterns — exclude if match ANY                                              |
 
 ## Question
 
@@ -174,17 +174,17 @@ Then reference either from your config:
 
 ## What goes wrong (validation errors you might hit)
 
-| Error                                         | Cause                                      |
-| --------------------------------------------- | ------------------------------------------ |
+| Error                                         | Cause                                                                              |
+| --------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `unknown choice "X"`                          | A `diagnostics.when.choice` or `probability.choice` not in the question's criteria |
-| `has_body is only valid for function targets` | `where.has_body: true` on a non-function rule |
-| `min_confidence exceeds max_confidence`       | Inverted confidence bounds in a condition  |
-| `probability needs min or max`                | A `probability` entry with neither bound   |
-| `rule needs at least one diagnostic policy`   | `diagnostics: []`                           |
-| `override refers to unknown rule "X"`        | Override references a rule not in `rules`  |
-| `duplicate rule "X" in /path/to/config.json`  | Same `id` appears twice in one config      |
-| `extends cycle at /path/to/config.json`       | Circular `extends` chain                   |
-| `configuration inheritance exceeds 64 levels`| `extends` chain too deep (max 64)         |
+| `has_body is only valid for function targets` | `where.has_body: true` on a non-function rule                                      |
+| `min_confidence exceeds max_confidence`       | Inverted confidence bounds in a condition                                          |
+| `probability needs min or max`                | A `probability` entry with neither bound                                           |
+| `rule needs at least one diagnostic policy`   | `diagnostics: []`                                                                  |
+| `override refers to unknown rule "X"`         | Override references a rule not in `rules`                                          |
+| `duplicate rule "X" in /path/to/config.json`  | Same `id` appears twice in one config                                              |
+| `extends cycle at /path/to/config.json`       | Circular `extends` chain                                                           |
+| `configuration inheritance exceeds 64 levels` | `extends` chain too deep (max 64)                                                  |
 
 ## See also
 

@@ -100,7 +100,10 @@ export class FileFilter {
  */
 export class ConfigError extends Error {
   override readonly name = "ConfigError";
-  constructor(message: string, readonly path?: string) {
+  constructor(
+    message: string,
+    readonly path?: string,
+  ) {
     super(path ? `${path}: ${message}` : message);
   }
 }

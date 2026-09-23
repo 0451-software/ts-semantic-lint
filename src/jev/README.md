@@ -25,10 +25,10 @@ const response = await client.evaluate({
 
 ### `JevClient`
 
-| Method | Purpose |
-|---|---|
-| `new JevClient({ key, endpoint?, userAgent?, fetch?, sleep?, rng?, policy? })` | Construct a client. Throws on an empty key. |
-| `client.evaluate(request): Promise<Response>` | POST `request` to the endpoint, retry transient failures, validate the response. |
+| Method                                                                         | Purpose                                                                          |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `new JevClient({ key, endpoint?, userAgent?, fetch?, sleep?, rng?, policy? })` | Construct a client. Throws on an empty key.                                      |
+| `client.evaluate(request): Promise<Response>`                                  | POST `request` to the endpoint, retry transient failures, validate the response. |
 
 The constructor accepts injection seams used by the test suite:
 
@@ -39,23 +39,23 @@ The constructor accepts injection seams used by the test suite:
 
 ### Types
 
-| Export | Purpose |
-|---|---|
-| `Question`, `ChoiceQuestion` | Wire-format question types (v1 supports `Choice` only). |
-| `Request`, `Response`, `ChoiceAnswer` | Wire-format request / response shapes. |
-| `Probability` | A branded `number` in `[0, 1]`. Construct via `makeProbability`. |
-| `toSharedAnswer(answer)` | Convert a wire `ChoiceAnswer` into the shared `JevAnswer` from `src/types.ts`. |
+| Export                                | Purpose                                                                        |
+| ------------------------------------- | ------------------------------------------------------------------------------ |
+| `Question`, `ChoiceQuestion`          | Wire-format question types (v1 supports `Choice` only).                        |
+| `Request`, `Response`, `ChoiceAnswer` | Wire-format request / response shapes.                                         |
+| `Probability`                         | A branded `number` in `[0, 1]`. Construct via `makeProbability`.               |
+| `toSharedAnswer(answer)`              | Convert a wire `ChoiceAnswer` into the shared `JevAnswer` from `src/types.ts`. |
 
 ### Errors
 
 All errors extend `JevError` and live under `src/jev/client.ts`.
 
-| Class | Meaning |
-|---|---|
-| `JevConfigError` | Misconfiguration (empty key). |
-| `JevHttpError` | Non-retriable HTTP failure (4xx other than 408/429, 5xx after retries exhausted). |
-| `JevRetryAfterExceededError` | `Retry-After` header > 60s. |
-| `JevResponseError` | Response body could not be coerced into the expected shape. |
+| Class                        | Meaning                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| `JevConfigError`             | Misconfiguration (empty key).                                                     |
+| `JevHttpError`               | Non-retriable HTTP failure (4xx other than 408/429, 5xx after retries exhausted). |
+| `JevRetryAfterExceededError` | `Retry-After` header > 60s.                                                       |
+| `JevResponseError`           | Response body could not be coerced into the expected shape.                       |
 
 The `ResponseValidationError` thrown by `validateResponse` is re-exported
 from `./types.js` and is treated as a permanent failure by the retry

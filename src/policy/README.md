@@ -7,14 +7,14 @@ foundation modules.
 
 ## Public API
 
-| Symbol | Kind | Description |
-|---|---|---|
-| `evaluateRule(rule, target, answer, overrideSetting)` | function | Produce the first matching `Diagnostic`, or `null`. |
-| `matches(condition, answer)` | function | Does a `Condition` accept this `JevAnswer`? |
-| `matchesSelector(selector, target)` | function | Does a `Selector` describe this `LintedTarget`? |
-| `resolveSeverity(policyLevel, override)` | function | Combine a policy's level with an optional override. |
-| `formatMessage(template, target)` | function | Substitute `{name}`, `{kind}`, `{file}` placeholders. |
-| `Rule`, `Policy`, `Condition`, `OverrideSetting` | type | Policy-module type contracts (in `types.ts`). |
+| Symbol                                                | Kind     | Description                                           |
+| ----------------------------------------------------- | -------- | ----------------------------------------------------- |
+| `evaluateRule(rule, target, answer, overrideSetting)` | function | Produce the first matching `Diagnostic`, or `null`.   |
+| `matches(condition, answer)`                          | function | Does a `Condition` accept this `JevAnswer`?           |
+| `matchesSelector(selector, target)`                   | function | Does a `Selector` describe this `LintedTarget`?       |
+| `resolveSeverity(policyLevel, override)`              | function | Combine a policy's level with an optional override.   |
+| `formatMessage(template, target)`                     | function | Substitute `{name}`, `{kind}`, `{file}` placeholders. |
+| `Rule`, `Policy`, `Condition`, `OverrideSetting`      | type     | Policy-module type contracts (in `types.ts`).         |
 
 ## Design Notes
 

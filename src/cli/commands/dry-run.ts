@@ -83,9 +83,8 @@ async function loadConfig(
   ctx: CommandContext,
   opts: CliOptions,
 ): Promise<unknown | undefined> {
-  const { load, loadFromDiscovery, ConfigError } = await import(
-    "../../config/index.js"
-  );
+  const { load, loadFromDiscovery, ConfigError } =
+    await import("../../config/index.js");
   try {
     return opts.config !== undefined
       ? await load(opts.config)

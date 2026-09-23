@@ -102,7 +102,11 @@ describe("parseArgv", () => {
 });
 
 describe("runCli", () => {
-  let buffer: { streams: ReturnType<typeof createBufferStreams>["streams"]; stdout: BufferStream; stderr: BufferStream };
+  let buffer: {
+    streams: ReturnType<typeof createBufferStreams>["streams"];
+    stdout: BufferStream;
+    stderr: BufferStream;
+  };
   beforeEach(() => {
     buffer = createBufferStreams();
   });
@@ -112,14 +116,18 @@ describe("runCli", () => {
   });
 
   it("--version prints the package version to stdout", async () => {
-    const code = await runCli(runArgs({ argv: ["--version"], streams: buffer.streams }));
+    const code = await runCli(
+      runArgs({ argv: ["--version"], streams: buffer.streams }),
+    );
     expect(code).toBe(ExitCode.Success);
     expect(buffer.stdout.text()).toBe(`${VERSION}\n`);
     expect(buffer.stderr.text()).toBe("");
   });
 
   it("--help prints the usage block to stdout", async () => {
-    const code = await runCli(runArgs({ argv: ["--help"], streams: buffer.streams }));
+    const code = await runCli(
+      runArgs({ argv: ["--help"], streams: buffer.streams }),
+    );
     expect(code).toBe(ExitCode.Success);
     expect(buffer.stdout.text()).toContain("ts-semantic-lint");
     expect(buffer.stdout.text()).toContain("--check-config");
@@ -191,7 +199,10 @@ describe("runCli", () => {
     expect(code).toBe(ExitCode.Success);
     // Stdout is a JSON plan — the runner is merged, so --dry-run now works.
     const parsed: unknown = JSON.parse(buffer.stdout.text());
-    expect(parsed).toMatchObject({ requests: expect.any(Array), targets: expect.any(Number) });
+    expect(parsed).toMatchObject({
+      requests: expect.any(Array),
+      targets: expect.any(Number),
+    });
   });
 
   it("default lint path with no jev_key exits 2 with a clear stderr message", async () => {

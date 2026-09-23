@@ -12,7 +12,8 @@
  * The `auto` mode additionally checks `process.stdout.isTTY`.
  */
 
-export type AnsiStyle = "bold" | "underline" | "red" | "yellow" | "blue" | "cyan" | "magenta";
+export type AnsiStyle =
+  "bold" | "underline" | "red" | "yellow" | "blue" | "cyan" | "magenta";
 
 const SGR_OPEN = "\x1b[";
 const SGR_RESET = "\x1b[0m";

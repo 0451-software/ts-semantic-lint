@@ -6,7 +6,11 @@
  * This module is intentionally side-effect-free. The bin entry lives
  * in `src/cli.ts` and is the only place that calls `process.exit`.
  */
-export { BufferStream, createBufferStreams, createDefaultStreams } from "./streams.js";
+export {
+  BufferStream,
+  createBufferStreams,
+  createDefaultStreams,
+} from "./streams.js";
 export type { StreamLike, Streams } from "./streams.js";
 export { ExitCode, asExitCode } from "./exit-codes.js";
 export type { ExitCodeValue } from "./exit-codes.js";

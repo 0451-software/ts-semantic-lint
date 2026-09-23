@@ -12,9 +12,9 @@
 name: integration
 
 on:
-  workflow_dispatch:        # manual trigger — full control
+  workflow_dispatch: # manual trigger — full control
   schedule:
-    - cron: '0 8 * * 1'     # Mondays 08:00 UTC — weekly cost-controlled run
+    - cron: "0 8 * * 1" # Mondays 08:00 UTC — weekly cost-controlled run
   pull_request:
 
 # Cancel previous in-progress runs when a new one is dispatched.
@@ -57,5 +57,4 @@ jobs:
       # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
       # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
       integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
-    secrets:
-      inherit
+    secrets: inherit

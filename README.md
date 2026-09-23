@@ -12,8 +12,8 @@ structured judgments, and your rule definition decides which judgments become wa
 ## What it is
 
 Traditional linters — ESLint, Biome, TypeScript itself — operate on syntax and patterns.
-They can tell you that `try { ... } catch (e) {}` is *syntactically valid*. They can't tell
-you that it's *silently swallowing an error*. `ts-semantic-lint` asks a model to make that
+They can tell you that `try { ... } catch (e) {}` is _syntactically valid_. They can't tell
+you that it's _silently swallowing an error_. `ts-semantic-lint` asks a model to make that
 judgment, and you write the rule that decides what to do with the answer. The diagnostic
 thresholds, severities, and messages are yours; the model only does the part that requires
 reading the code for meaning.
@@ -27,12 +27,12 @@ They are not the right tool for the questions below. The table shows one row per
 rule shipped with this repository; each is a real judgment that a syntax linter cannot
 make because the code parses cleanly.
 
-| Smell | ESLint rule? | Biome rule? | `ts-semantic-lint`? |
-| --- | --- | --- | --- |
-| Function with avoidable boolean-toggle branching | No (the AST is valid) | No | Yes (`function-simplicity`) |
-| JSDoc that restates the parameter types | No (`valid-jsdoc` checks syntax, not value) | No | Yes (`comment-value`) |
-| `try { ... } catch {}` silently swallowing | `no-empty` matches the syntax but flags every empty catch the same way | `noEmptyCatch` matches the syntax but flags every empty catch the same way | Yes (`error-handling-completeness`) — distinguishes empty-because-intentional from empty-because-careless |
-| Naming that misleads about side effects | `camelcase` is style only | No | Yes (configurable; `name-clarity` is the example) |
+| Smell                                            | ESLint rule?                                                           | Biome rule?                                                                | `ts-semantic-lint`?                                                                                       |
+| ------------------------------------------------ | ---------------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Function with avoidable boolean-toggle branching | No (the AST is valid)                                                  | No                                                                         | Yes (`function-simplicity`)                                                                               |
+| JSDoc that restates the parameter types          | No (`valid-jsdoc` checks syntax, not value)                            | No                                                                         | Yes (`comment-value`)                                                                                     |
+| `try { ... } catch {}` silently swallowing       | `no-empty` matches the syntax but flags every empty catch the same way | `noEmptyCatch` matches the syntax but flags every empty catch the same way | Yes (`error-handling-completeness`) — distinguishes empty-because-intentional from empty-because-careless |
+| Naming that misleads about side effects          | `camelcase` is style only                                              | No                                                                         | Yes (configurable; `name-clarity` is the example)                                                         |
 
 The third row is the one that gets attention. `no-empty` and `noEmptyCatch` flag every
 empty catch block identically. A semantic rule can tell you which ones are intentionally
@@ -70,11 +70,11 @@ never in version control. `.env` files are not loaded automatically.
 
 ### Exit codes
 
-| Code | Meaning |
-| --- | --- |
-| `0` | No errors (warnings allowed) |
-| `1` | Errors present, or warnings present with `--deny-warnings` |
-| `2` | Config, parse, auth, network, or other operational failure |
+| Code | Meaning                                                    |
+| ---- | ---------------------------------------------------------- |
+| `0`  | No errors (warnings allowed)                               |
+| `1`  | Errors present, or warnings present with `--deny-warnings` |
+| `2`  | Config, parse, auth, network, or other operational failure |
 
 Wire `2` separately in CI — it means the linter itself did not run, not that the code is bad.
 
@@ -285,7 +285,7 @@ async function getSettings(): Promise<Settings> {
   try {
     return await fetchSettings();
   } catch (e) {
-    return {} as Settings;  // caller has no idea the fetch failed
+    return {} as Settings; // caller has no idea the fetch failed
   }
 }
 
@@ -354,11 +354,11 @@ src/settings.ts:7:1
 
 Every rule has the same four-part shape.
 
-| Field | Purpose |
-| --- | --- |
-| `id` | A stable identifier for the rule; appears in diagnostics and any `--format json` output |
-| `where` | Which AST nodes the rule targets — a `kind` (e.g. `function`, `arrow`, `method`), plus optional shape predicates |
-| `question` | What to ask Jev — a `type` (`choice` is the only kind supported today), the prompt, the criteria, and the field set Jev may inspect |
+| Field         | Purpose                                                                                                                                                                           |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | A stable identifier for the rule; appears in diagnostics and any `--format json` output                                                                                           |
+| `where`       | Which AST nodes the rule targets — a `kind` (e.g. `function`, `arrow`, `method`), plus optional shape predicates                                                                  |
+| `question`    | What to ask Jev — a `type` (`choice` is the only kind supported today), the prompt, the criteria, and the field set Jev may inspect                                               |
 | `diagnostics` | Which Jev answers become findings; each diagnostic pairs a `when` condition (the choice and a `min_confidence` floor) with a `level` (`warn` or `error`) and a `message` template |
 
 Three things to know about the `question`:
@@ -367,9 +367,9 @@ Three things to know about the `question`:
   `enclosing` (the smallest enclosing function or block), or `file` (the whole file).
   `enclosing` is the right default for most rules; `file` is rarely worth the token cost.
 - **`instructions`** is either a plain string or a `{question, focus?, inspect?}` object.
-  Use the object form when you want to give Jev a *focus* clause (the most influential part
-  of the prompt — for `function-simplicity`, the focus phrase is exactly *"Length alone
-  is not complexity"*; without it the rule over-matches) or an `inspect` pointer to the
+  Use the object form when you want to give Jev a _focus_ clause (the most influential part
+  of the prompt — for `function-simplicity`, the focus phrase is exactly _"Length alone
+  is not complexity"_; without it the rule over-matches) or an `inspect` pointer to the
   state fields the model should read first. Use the plain string form when the question
   is short and self-explanatory.
 - **`criteria`** accepts either a plain string or a `{what, not_for?, examples?}` object
@@ -434,16 +434,16 @@ npm install
 
 Common scripts:
 
-| Script | Purpose |
-| --- | --- |
-| `npm run build` | Compile to `dist/` |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Run the unit test suite once |
-| `npm run test:watch` | Vitest in watch mode |
-| `npm run lint` | ESLint over the source tree |
-| `npm run lint:fix` | ESLint with `--fix` |
-| `npm run format` | Prettier write |
-| `npm run format:check` | Prettier check (CI gate) |
+| Script                     | Purpose                                              |
+| -------------------------- | ---------------------------------------------------- |
+| `npm run build`            | Compile to `dist/`                                   |
+| `npm run typecheck`        | `tsc --noEmit`                                       |
+| `npm test`                 | Run the unit test suite once                         |
+| `npm run test:watch`       | Vitest in watch mode                                 |
+| `npm run lint`             | ESLint over the source tree                          |
+| `npm run lint:fix`         | ESLint with `--fix`                                  |
+| `npm run format`           | Prettier write                                       |
+| `npm run format:check`     | Prettier check (CI gate)                             |
 | `npm run test:integration` | Live integration suite — requires `TYPESAFE_API_KEY` |
 
 The integration suite makes real Jev calls. Keep the API key out of the repo and use

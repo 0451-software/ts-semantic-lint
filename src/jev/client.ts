@@ -166,7 +166,9 @@ export function resolvePackageVersion(fromUrl: string): string {
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 /** HTTP statuses that get a retry (matches the Rust predicate). */
-const RETRY_STATUSES: ReadonlySet<number> = new Set([408, 429, 500, 502, 503, 504]);
+const RETRY_STATUSES: ReadonlySet<number> = new Set([
+  408, 429, 500, 502, 503, 504,
+]);
 
 const PERMANENT_FAILURE_LIMIT_MS = 60_000;
 
@@ -197,20 +199,30 @@ function coerceAnswer(value: unknown, id: string): ChoiceAnswer {
     );
   }
   if (typeof obj["choice"] !== "string") {
-    throw new JevResponseError(
-      `answers["${id}"].choice must be a string`,
-    );
+    throw new JevResponseError(`answers["${id}"].choice must be a string`);
   }
-  const confidence = coerceProbability(obj["confidence"], `answers["${id}"].confidence`);
+  const confidence = coerceProbability(
+    obj["confidence"],
+    `answers["${id}"].confidence`,
+  );
   const rawProbs = obj["probabilities"];
-  if (typeof rawProbs !== "object" || rawProbs === null || Array.isArray(rawProbs)) {
+  if (
+    typeof rawProbs !== "object" ||
+    rawProbs === null ||
+    Array.isArray(rawProbs)
+  ) {
     throw new JevResponseError(
       `answers["${id}"].probabilities must be an object`,
     );
   }
   const probabilities: Record<string, Probability> = {};
-  for (const [key, raw] of Object.entries(rawProbs as Record<string, unknown>)) {
-    probabilities[key] = coerceProbability(raw, `answers["${id}"].probabilities["${key}"]`);
+  for (const [key, raw] of Object.entries(
+    rawProbs as Record<string, unknown>,
+  )) {
+    probabilities[key] = coerceProbability(
+      raw,
+      `answers["${id}"].probabilities["${key}"]`,
+    );
   }
   return {
     type: "choice",
@@ -229,11 +241,17 @@ function coerceResponse(parsed: unknown): Response {
     throw new JevResponseError("response.model must be a string");
   }
   const rawAnswers = obj["answers"];
-  if (typeof rawAnswers !== "object" || rawAnswers === null || Array.isArray(rawAnswers)) {
+  if (
+    typeof rawAnswers !== "object" ||
+    rawAnswers === null ||
+    Array.isArray(rawAnswers)
+  ) {
     throw new JevResponseError("response.answers must be an object");
   }
   const answers: Record<string, ChoiceAnswer> = {};
-  for (const [id, raw] of Object.entries(rawAnswers as Record<string, unknown>)) {
+  for (const [id, raw] of Object.entries(
+    rawAnswers as Record<string, unknown>,
+  )) {
     answers[id] = coerceAnswer(raw, id);
   }
   return { model: obj["model"], answers };
@@ -325,7 +343,9 @@ export class JevClient {
       // The dispatcher is only used by the undici fetch implementation
       // — it carries the per-origin connect timeout. The mock fetch in
       // tests ignores unknown init keys, so it can be left in place.
-      const dispatcher = new UndiciAgent({ connectTimeout: CONNECT_TIMEOUT_MS });
+      const dispatcher = new UndiciAgent({
+        connectTimeout: CONNECT_TIMEOUT_MS,
+      });
       const response = await this.#fetch(this.#endpoint, {
         method: "POST",
         headers: {
@@ -343,7 +363,10 @@ export class JevClient {
         const status = response.status;
         const retryAfterHeader = response.headers.get("retry-after");
         const retryAfterMs = retryAfter(retryAfterHeader);
-        if (retryAfterMs !== undefined && retryAfterMs > PERMANENT_FAILURE_LIMIT_MS) {
+        if (
+          retryAfterMs !== undefined &&
+          retryAfterMs > PERMANENT_FAILURE_LIMIT_MS
+        ) {
           throw new JevRetryAfterExceededError(status, retryAfterMs);
         }
         if (!RETRY_STATUSES.has(status)) {
@@ -409,18 +432,13 @@ export class JevClient {
   #wrapError(error: unknown, attempts: number): Error {
     if (error instanceof JevError) {
       // Add attempt count for context (preserving the original message).
-      const suffix =
-        attempts > 1 ? ` (after ${attempts} attempts)` : "";
-      const wrapped = new JevError(
-        `${error.message}${suffix}`,
-        error,
-      );
+      const suffix = attempts > 1 ? ` (after ${attempts} attempts)` : "";
+      const wrapped = new JevError(`${error.message}${suffix}`, error);
       // Preserve the original name for downstream `instanceof` checks.
       Object.defineProperty(wrapped, "name", { value: error.name });
       return wrapped;
     }
-    const detail =
-      error instanceof Error ? error.message : String(error);
+    const detail = error instanceof Error ? error.message : String(error);
     return new JevError(
       `Jev evaluation failed after ${attempts} attempt${attempts === 1 ? "" : "s"}: ${detail}`,
       error,
@@ -429,9 +447,7 @@ export class JevClient {
 
   #notify(error: unknown, attempt: number): void {
     const detail =
-      error instanceof Error
-        ? error.stack ?? error.message
-        : String(error);
+      error instanceof Error ? (error.stack ?? error.message) : String(error);
     process.stderr.write(
       `ts-semantic-lint: jev attempt ${attempt} failed: ${detail}\n`,
     );

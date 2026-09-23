@@ -174,7 +174,9 @@ export function validateQuestion(question: Question): void {
   }
   const count = Object.keys(question.criteria).length;
   if (count < 2 || count > 255) {
-    throw new Error(`a choice question requires 2 to 255 choices, got ${count}`);
+    throw new Error(
+      `a choice question requires 2 to 255 choices, got ${count}`,
+    );
   }
   for (const key of Object.keys(question.criteria)) {
     if (key.trim().length === 0) {

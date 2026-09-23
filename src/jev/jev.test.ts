@@ -33,7 +33,12 @@ function makeAnswer(): {
   parsed: {
     model: string;
     answers: {
-      quality: { type: "choice"; choice: string; confidence: number; probabilities: Record<string, number> };
+      quality: {
+        type: "choice";
+        choice: string;
+        confidence: number;
+        probabilities: Record<string, number>;
+      };
     };
   };
 } {
@@ -81,10 +86,9 @@ interface CapturedRequest {
 function createMockFetch(responses: MockResponse[]) {
   let callIndex = 0;
   const calls: CapturedRequest[] = [];
-  const fetchImpl: NonNullable<ConstructorParameters<typeof JevClient>[0]["fetch"]> = async (
-    url,
-    init,
-  ) => {
+  const fetchImpl: NonNullable<
+    ConstructorParameters<typeof JevClient>[0]["fetch"]
+  > = async (url, init) => {
     calls.push({
       url,
       method: init.method,
@@ -115,7 +119,9 @@ function createMockFetch(responses: MockResponse[]) {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function makeClient(fetchImpl: ReturnType<typeof createMockFetch>["fetchImpl"]) {
+function makeClient(
+  fetchImpl: ReturnType<typeof createMockFetch>["fetchImpl"],
+) {
   return new JevClient({
     key: "test-key",
     endpoint: "https://jev.example.test/evaluate",
@@ -136,7 +142,10 @@ describe("JevClient — construction", () => {
   });
 
   it("accepts a custom endpoint", () => {
-    const client = new JevClient({ key: "test-key", endpoint: "https://custom.test/v1" });
+    const client = new JevClient({
+      key: "test-key",
+      endpoint: "https://custom.test/v1",
+    });
     expect(client.endpoint).toBe("https://custom.test/v1");
   });
 
@@ -145,14 +154,18 @@ describe("JevClient — construction", () => {
   });
 
   it("throws on a whitespace-only key", () => {
-    expect(() => new JevClient({ key: "   " })).toThrow(/key must not be empty/);
+    expect(() => new JevClient({ key: "   " })).toThrow(
+      /key must not be empty/,
+    );
   });
 });
 
 describe("JevClient.evaluate — success path", () => {
   it("POSTs JSON to the endpoint with a Bearer header and User-Agent", async () => {
     const answer = makeAnswer();
-    const { fetchImpl, calls } = createMockFetch([{ status: 200, body: answer.body }]);
+    const { fetchImpl, calls } = createMockFetch([
+      { status: 200, body: answer.body },
+    ]);
     const client = makeClient(fetchImpl);
     const response = await client.evaluate(validRequest);
     expect(response.model).toBe("jev-test");
@@ -289,7 +302,9 @@ describe("JevClient.evaluate — Retry-After handling", () => {
       { status: 429, body: "", headers: { "Retry-After": "61" } },
     ]);
     const client = makeClient(fetchImpl);
-    await expect(client.evaluate(validRequest)).rejects.toThrow(/60s retry limit/);
+    await expect(client.evaluate(validRequest)).rejects.toThrow(
+      /60s retry limit/,
+    );
     expect(calls).toHaveLength(1);
   });
 });
@@ -385,7 +400,9 @@ describe("JevClient — transport failures are retried", () => {
   it("retries when the underlying fetch throws", async () => {
     const answer = makeAnswer();
     let calls = 0;
-    const fetchImpl: NonNullable<ConstructorParameters<typeof JevClient>[0]["fetch"]> = async () => {
+    const fetchImpl: NonNullable<
+      ConstructorParameters<typeof JevClient>[0]["fetch"]
+    > = async () => {
       calls++;
       if (calls === 1) {
         throw new Error("ECONNRESET");
@@ -411,7 +428,9 @@ describe("JevClient — transport failures are retried", () => {
 
   it("fails after 4 attempts when the underlying fetch always throws", async () => {
     let calls = 0;
-    const fetchImpl: NonNullable<ConstructorParameters<typeof JevClient>[0]["fetch"]> = async () => {
+    const fetchImpl: NonNullable<
+      ConstructorParameters<typeof JevClient>[0]["fetch"]
+    > = async () => {
       calls++;
       throw new Error("ECONNRESET");
     };
@@ -450,7 +469,12 @@ describe("computeBackoff", () => {
   });
 
   it("caps exponential growth at maxDelayMs", () => {
-    const policy = { ...defaultPolicy, minDelayMs: 30_000, factor: 2, maxDelayMs: 60_000 };
+    const policy = {
+      ...defaultPolicy,
+      minDelayMs: 30_000,
+      factor: 2,
+      maxDelayMs: 60_000,
+    };
     // Without cap: 30000, 60000, 120000 → cap kicks in at attempt 4
     expect(computeBackoff(2, policy, () => 0)).toBe(30_000);
     expect(computeBackoff(3, policy, () => 0)).toBe(60_000); // capped

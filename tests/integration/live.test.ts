@@ -89,7 +89,9 @@ describe("integration suite gating", () => {
   it("reports whether TYPESAFE_API_KEY is present", () => {
     if (KEY_PRESENT) {
       // eslint-disable-next-line no-console
-      console.log("[integration] TYPESAFE_API_KEY present — live suite will run");
+      console.log(
+        "[integration] TYPESAFE_API_KEY present — live suite will run",
+      );
     } else {
       // eslint-disable-next-line no-console
       console.log(
@@ -114,13 +116,22 @@ describe("CLI offline modes (no key required)", () => {
         "exits 0 with JSON on stdout and lists requests covering both targets",
         async () => {
           const result = await runCli({
-            argv: ["--dry-run", "--config", CONFIG_PATH, fixture.file, "--format", "json"],
+            argv: [
+              "--dry-run",
+              "--config",
+              CONFIG_PATH,
+              fixture.file,
+              "--format",
+              "json",
+            ],
             timeoutMs: PER_FIXTURE_TIMEOUT_MS,
           });
           expect(result.exitCode, `stderr: ${result.stderr}`).toBe(0);
           const plan = asDryRunPlan(result.json);
           expect(plan.requests.length).toBeGreaterThan(0);
-          const allStates = plan.requests.map((r) => JSON.stringify(r.state)).join("\n");
+          const allStates = plan.requests
+            .map((r) => JSON.stringify(r.state))
+            .join("\n");
           expect(allStates).toContain(fixture.violation);
           expect(allStates).toContain(fixture.control);
           // At least one request should mention the expected choice in its criteria.
@@ -132,17 +143,25 @@ describe("CLI offline modes (no key required)", () => {
     });
   }
 
-  it("--check-config succeeds against the fixture config", async () => {
-    const result = await runCli({
-      argv: ["--check-config", "--config", CONFIG_PATH, "--format", "json"],
-      timeoutMs: PER_FIXTURE_TIMEOUT_MS,
-    });
-    expect(result.exitCode, `stderr: ${result.stderr}`).toBe(0);
-    const parsed = result.json as { rules: number; valid: boolean; config: string };
-    expect(parsed.valid).toBe(true);
-    expect(parsed.rules).toBe(3);
-    expect(parsed.config).toContain("ts-semantic-lint.json");
-  }, PER_FIXTURE_TIMEOUT_MS);
+  it(
+    "--check-config succeeds against the fixture config",
+    async () => {
+      const result = await runCli({
+        argv: ["--check-config", "--config", CONFIG_PATH, "--format", "json"],
+        timeoutMs: PER_FIXTURE_TIMEOUT_MS,
+      });
+      expect(result.exitCode, `stderr: ${result.stderr}`).toBe(0);
+      const parsed = result.json as {
+        rules: number;
+        valid: boolean;
+        config: string;
+      };
+      expect(parsed.valid).toBe(true);
+      expect(parsed.rules).toBe(3);
+      expect(parsed.config).toContain("ts-semantic-lint.json");
+    },
+    PER_FIXTURE_TIMEOUT_MS,
+  );
 });
 
 describeLive("live Jev calls (requires TYPESAFE_API_KEY)", () => {
@@ -169,7 +188,8 @@ describeLive("live Jev calls (requires TYPESAFE_API_KEY)", () => {
         ).toContain(result.exitCode);
         const report = asLintReport(result.json);
         const matches = report.diagnostics.filter(
-          (d) => d.ruleId === fixture.id && d.message.includes(fixture.violation),
+          (d) =>
+            d.ruleId === fixture.id && d.message.includes(fixture.violation),
         );
         if (matches.length === 0) {
           // eslint-disable-next-line no-console
@@ -236,23 +256,27 @@ describeLive("live Jev calls (requires TYPESAFE_API_KEY)", () => {
   }
 
   describe("cross-cutting cost guard", () => {
-    it("total Jev calls per fixture stay reasonable (≤ 20, warn-only)", async () => {
-      for (const f of FIXTURES) {
-        const res = await runCli({
-          argv: ["--dry-run", "--config", CONFIG_PATH, f.file],
-          timeoutMs: PER_FIXTURE_TIMEOUT_MS,
-        });
-        const plan = asDryRunPlan(res.json);
-        const calls = plan.requests.length;
-        if (calls > 20) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            `[integration] ${f.id} would make ${calls} Jev calls (warn-only: target ≤ 20)`,
-          );
+    it(
+      "total Jev calls per fixture stay reasonable (≤ 20, warn-only)",
+      async () => {
+        for (const f of FIXTURES) {
+          const res = await runCli({
+            argv: ["--dry-run", "--config", CONFIG_PATH, f.file],
+            timeoutMs: PER_FIXTURE_TIMEOUT_MS,
+          });
+          const plan = asDryRunPlan(res.json);
+          const calls = plan.requests.length;
+          if (calls > 20) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[integration] ${f.id} would make ${calls} Jev calls (warn-only: target ≤ 20)`,
+            );
+          }
+          expect(calls).toBeLessThanOrEqual(20);
         }
-        expect(calls).toBeLessThanOrEqual(20);
-      }
-    }, PER_FIXTURE_TIMEOUT_MS * 2);
+      },
+      PER_FIXTURE_TIMEOUT_MS * 2,
+    );
   });
 });
 
@@ -264,7 +288,9 @@ afterAll(() => {
 });
 
 function collectCriteriaChoices(
-  requests: readonly { readonly questions: Readonly<Record<string, unknown>> }[],
+  requests: readonly {
+    readonly questions: Readonly<Record<string, unknown>>;
+  }[],
 ): string[] {
   const out: string[] = [];
   for (const r of requests) {

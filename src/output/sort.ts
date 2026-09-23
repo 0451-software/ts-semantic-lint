@@ -29,6 +29,8 @@ export function compareDiagnostics(a: Diagnostic, b: Diagnostic): number {
   return 0;
 }
 
-export function sortDiagnostics(diagnostics: readonly Diagnostic[]): Diagnostic[] {
+export function sortDiagnostics(
+  diagnostics: readonly Diagnostic[],
+): Diagnostic[] {
   return [...diagnostics].sort(compareDiagnostics);
 }

@@ -104,10 +104,7 @@ async function loadInto(
   const seen = new Set<string>();
   for (const rule of collected) {
     if (seen.has(rule.id)) {
-      throw new ConfigError(
-        `duplicate rule id "${rule.id}" in ${path}`,
-        path,
-      );
+      throw new ConfigError(`duplicate rule id "${rule.id}" in ${path}`, path);
     }
     seen.add(rule.id);
     merged.rules.set(rule.id, rule);
@@ -129,20 +126,14 @@ async function readAndParse(path: string): Promise<ConfigFileInput> {
   try {
     json = JSON.parse(text);
   } catch (err) {
-    throw new ConfigError(
-      `invalid JSON: ${(err as Error).message}`,
-      path,
-    );
+    throw new ConfigError(`invalid JSON: ${(err as Error).message}`, path);
   }
   const result = ConfigFileSchema.safeParse(json);
   if (!result.success) {
     const issues = result.error.issues
       .map((i) => `  - ${i.path.join(".") || "(root)"}: ${i.message}`)
       .join("\n");
-    throw new ConfigError(
-      `invalid config:\n${issues}`,
-      path,
-    );
+    throw new ConfigError(`invalid config:\n${issues}`, path);
   }
   return result.data;
 }
@@ -158,10 +149,7 @@ async function readRuleFile(path: string): Promise<RuleInput[]> {
   try {
     json = JSON.parse(text);
   } catch (err) {
-    throw new ConfigError(
-      `invalid JSON: ${(err as Error).message}`,
-      path,
-    );
+    throw new ConfigError(`invalid JSON: ${(err as Error).message}`, path);
   }
   // Each rule_file may be a single rule or an array.
   const isArray = Array.isArray(json);
@@ -174,7 +162,14 @@ async function readRuleFile(path: string): Promise<RuleInput[]> {
 }
 
 function parseOne<T>(
-  schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } } },
+  schema: {
+    safeParse: (v: unknown) =>
+      | { success: true; data: T }
+      | {
+          success: false;
+          error: { issues: { path: (string | number)[]; message: string }[] };
+        };
+  },
   value: unknown,
   path: string,
   pointer = "",
@@ -207,10 +202,7 @@ async function canonicalize(p: string): Promise<string> {
     return await realpath(p);
   } catch (err) {
     if (!existsSync(p)) {
-      throw new ConfigError(
-        `cannot open ${p}: ${(err as Error).message}`,
-        p,
-      );
+      throw new ConfigError(`cannot open ${p}: ${(err as Error).message}`, p);
     }
     throw new ConfigError(
       `cannot canonicalize ${p}: ${(err as Error).message}`,

@@ -33,11 +33,7 @@ import type {
   Response as JevResponse,
 } from "../jev/types.js";
 import { makeProbability } from "../jev/types.js";
-import type {
-  AppliedRule,
-  LintedTarget,
-  SourceRange,
-} from "../types.js";
+import type { AppliedRule, LintedTarget, SourceRange } from "../types.js";
 
 import { batch, targetKey } from "./batch.js";
 import { extractAll } from "./extract.js";
@@ -241,7 +237,10 @@ describe("scan", () => {
     await mkdir(join(dir, "target"), { recursive: true });
     await mkdir(join(dir, "src"), { recursive: true });
 
-    await writeFile(join(dir, "node_modules", "skip.ts"), "export const x = 1;\n");
+    await writeFile(
+      join(dir, "node_modules", "skip.ts"),
+      "export const x = 1;\n",
+    );
     await writeFile(join(dir, "dist", "skip.ts"), "export const x = 1;\n");
     await writeFile(join(dir, ".git", "skip.ts"), "export const x = 1;\n");
     await writeFile(join(dir, "coverage", "skip.ts"), "export const x = 1;\n");
@@ -355,8 +354,14 @@ async function matchOnDisk(args: {
 
 describe("match", () => {
   it("assigns rules based on where.kind", async () => {
-    const ruleA = makeRule({ id: "rule-fn", where: { kind: "function", files: [], exclude: [] } });
-    const ruleB = makeRule({ id: "rule-class", where: { kind: "class", files: [], exclude: [] } });
+    const ruleA = makeRule({
+      id: "rule-fn",
+      where: { kind: "function", files: [], exclude: [] },
+    });
+    const ruleB = makeRule({
+      id: "rule-class",
+      where: { kind: "class", files: [], exclude: [] },
+    });
 
     const file = join(scratchDir, "src.ts");
     const out = await matchOnDisk({
@@ -365,15 +370,18 @@ describe("match", () => {
       files: [
         {
           path: file,
-          content:
-            "export function f() { return 1; }\nexport class G {}\n",
+          content: "export function f() { return 1; }\nexport class G {}\n",
         },
       ],
     });
     const fnAnnotated = out.annotated.find((t) => t.name === "f");
     const clsAnnotated = out.annotated.find((t) => t.name === "G");
-    expect(fnAnnotated?.appliedRules.map((r: AppliedRule) => r.ruleId)).toEqual(["rule-fn"]);
-    expect(clsAnnotated?.appliedRules.map((r: AppliedRule) => r.ruleId)).toEqual(["rule-class"]);
+    expect(fnAnnotated?.appliedRules.map((r: AppliedRule) => r.ruleId)).toEqual(
+      ["rule-fn"],
+    );
+    expect(
+      clsAnnotated?.appliedRules.map((r: AppliedRule) => r.ruleId),
+    ).toEqual(["rule-class"]);
     expect(out.byRule.get("rule-fn")?.length).toBe(1);
     expect(out.byRule.get("rule-class")?.length).toBe(1);
   });
@@ -479,7 +487,10 @@ describe("batch", () => {
     const config = makeConfig({ rules: [rule], root: "/proj" });
 
     const target = makeTarget();
-    const annotated = { ...target, appliedRules: [{ ruleId: "r1", context: "enclosing" as const }] };
+    const annotated = {
+      ...target,
+      appliedRules: [{ ruleId: "r1", context: "enclosing" as const }],
+    };
     const out = await batch([annotated], config);
 
     expect(out.length).toBe(1);
@@ -527,8 +538,14 @@ describe("evaluate", () => {
 
     const target1 = makeTarget({ name: "a", file: "/proj/a.ts" });
     const target2 = makeTarget({ name: "b", file: "/proj/b.ts" });
-    const annotated1 = { ...target1, appliedRules: [{ ruleId: "r1", context: "enclosing" as const }] };
-    const annotated2 = { ...target2, appliedRules: [{ ruleId: "r1", context: "enclosing" as const }] };
+    const annotated1 = {
+      ...target1,
+      appliedRules: [{ ruleId: "r1", context: "enclosing" as const }],
+    };
+    const annotated2 = {
+      ...target2,
+      appliedRules: [{ ruleId: "r1", context: "enclosing" as const }],
+    };
     const batches = await batch([annotated1, annotated2], config);
 
     const fake = makeFakeJev();
@@ -576,9 +593,18 @@ describe("evaluate", () => {
       },
     });
 
-    const annotated1 = { ...t1, appliedRules: [{ ruleId: "rA", context: "enclosing" as const }] };
-    const annotated2 = { ...t2, appliedRules: [{ ruleId: "rA", context: "enclosing" as const }] };
-    const annotated3 = { ...t3, appliedRules: [{ ruleId: "rB", context: "enclosing" as const }] };
+    const annotated1 = {
+      ...t1,
+      appliedRules: [{ ruleId: "rA", context: "enclosing" as const }],
+    };
+    const annotated2 = {
+      ...t2,
+      appliedRules: [{ ruleId: "rA", context: "enclosing" as const }],
+    };
+    const annotated3 = {
+      ...t3,
+      appliedRules: [{ ruleId: "rB", context: "enclosing" as const }],
+    };
 
     const batches = await batch([annotated1, annotated2, annotated3], config);
     const fake = makeFakeJev();
@@ -591,11 +617,9 @@ describe("evaluate", () => {
       jobs: 4,
     });
     expect(diagnostics.length).toBe(3);
-    expect(diagnostics.map((d) => `${d.file}:${d.range.start.line}:${d.ruleId}`)).toEqual([
-      "/proj/a.ts:1:rA",
-      "/proj/a.ts:10:rB",
-      "/proj/b.ts:5:rA",
-    ]);
+    expect(
+      diagnostics.map((d) => `${d.file}:${d.range.start.line}:${d.ruleId}`),
+    ).toEqual(["/proj/a.ts:1:rA", "/proj/a.ts:10:rB", "/proj/b.ts:5:rA"]);
   });
 
   it("throws when Jev fails (no silent skip)", async () => {
@@ -603,7 +627,10 @@ describe("evaluate", () => {
     const config = makeConfig({ rules: [rule], root: "/proj" });
 
     const target = makeTarget();
-    const annotated = { ...target, appliedRules: [{ ruleId: "r1", context: "enclosing" as const }] };
+    const annotated = {
+      ...target,
+      appliedRules: [{ ruleId: "r1", context: "enclosing" as const }],
+    };
     const batches = await batch([annotated], config);
 
     const fake = makeFakeJev();
@@ -632,27 +659,33 @@ describe("evaluate", () => {
   });
 
   it("passes 'no' answer through to evaluateRule, producing no diagnostic", async () => {
-      const rule = makeRule({
-        id: "r1",
-        diagnostics: [
-          { when: { choice: "yes" }, level: "warn", message: "yes-msg" },
-        ],
-      });
-      const config = makeConfig({ rules: [rule], root: scratchDir });
-
-      await writeFile(join(scratchDir, "a.ts"), "export function a() { return 1; }\n");
-      const fake = makeFakeJev();
-      fake.setScriptedResponse(
-        jevResponse("r1", makeAnswer({ choice: "no", confidence: makeProbability(0.95) })),
-      );
-
-      const result = await run([scratchDir], {
-        config,
-        client: fake,
-        jobs: 1,
-      });
-      expect(result.diagnostics.length).toBe(0);
+    const rule = makeRule({
+      id: "r1",
+      diagnostics: [
+        { when: { choice: "yes" }, level: "warn", message: "yes-msg" },
+      ],
     });
+    const config = makeConfig({ rules: [rule], root: scratchDir });
+
+    await writeFile(
+      join(scratchDir, "a.ts"),
+      "export function a() { return 1; }\n",
+    );
+    const fake = makeFakeJev();
+    fake.setScriptedResponse(
+      jevResponse(
+        "r1",
+        makeAnswer({ choice: "no", confidence: makeProbability(0.95) }),
+      ),
+    );
+
+    const result = await run([scratchDir], {
+      config,
+      client: fake,
+      jobs: 1,
+    });
+    expect(result.diagnostics.length).toBe(0);
+  });
 });
 
 // ─── buildRequests ──────────────────────────────────────────────────────────
@@ -662,7 +695,10 @@ describe("buildRequests", () => {
     const rule = makeRule({ id: "r1" });
     const config = makeConfig({ rules: [rule], root: scratchDir });
 
-    await writeFile(join(scratchDir, "a.ts"), "export function a() { return 1; }\n");
+    await writeFile(
+      join(scratchDir, "a.ts"),
+      "export function a() { return 1; }\n",
+    );
     const out = await buildRequests([scratchDir], config);
 
     // Each request has the right model and a "r1" question.
@@ -688,7 +724,10 @@ describe("run", () => {
 
     const fake = makeFakeJev();
     fake.setScriptedResponse(
-      jevResponse("r1", makeAnswer({ choice: "yes", confidence: makeProbability(0.7) })),
+      jevResponse(
+        "r1",
+        makeAnswer({ choice: "yes", confidence: makeProbability(0.7) }),
+      ),
     );
 
     const result = await run([dir], {
@@ -718,9 +757,18 @@ describe("run", () => {
     const t1 = makeTarget({ name: "t1" });
     const t2 = makeTarget({ name: "t2" });
     const t3 = makeTarget({ name: "t3" });
-    const annotated1 = { ...t1, appliedRules: [{ ruleId: "r1", context: "enclosing" as const }] };
-    const annotated2 = { ...t2, appliedRules: [{ ruleId: "r2", context: "enclosing" as const }] };
-    const annotated3 = { ...t3, appliedRules: [{ ruleId: "r3", context: "enclosing" as const }] };
+    const annotated1 = {
+      ...t1,
+      appliedRules: [{ ruleId: "r1", context: "enclosing" as const }],
+    };
+    const annotated2 = {
+      ...t2,
+      appliedRules: [{ ruleId: "r2", context: "enclosing" as const }],
+    };
+    const annotated3 = {
+      ...t3,
+      appliedRules: [{ ruleId: "r3", context: "enclosing" as const }],
+    };
     const batches = await batch([annotated1, annotated2, annotated3], config);
 
     let maxInFlight = 0;
@@ -763,8 +811,14 @@ describe("run", () => {
     const fake = makeFakeJev();
     fake.setScriptedResponse(jevResponse("r1", makeAnswer()));
     const onRetry = vi.fn();
-    const config = makeConfig({ rules: [makeRule({ id: "r1" })], root: scratchDir });
-    await writeFile(join(scratchDir, "a.ts"), "export function a() { return 1; }\n");
+    const config = makeConfig({
+      rules: [makeRule({ id: "r1" })],
+      root: scratchDir,
+    });
+    await writeFile(
+      join(scratchDir, "a.ts"),
+      "export function a() { return 1; }\n",
+    );
 
     await run([scratchDir], {
       config,
