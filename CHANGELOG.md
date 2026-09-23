@@ -43,6 +43,12 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | `ignore` | `^7.0.0` | `^7.0.10` | Patch-level. |
 | `vitest` | `^2.1.8` | `^5.0.0` | Merged from PR #17 (security advisory clearance); adds `vite@^6.4.3` direct dep + `pnpm.overrides` pinning `vite` and `esbuild`. |
 
+**Newly outdated as a side effect of the vitest 5 bump (vite, esbuild are now direct devDeps through `pnpm.overrides`):**
+
+| Package | Current | Latest | Reason deferred | Follow-up card |
+| --- | --- | --- | --- | --- |
+| `vite` | `^6.4.3` | `^8.3.0` | Vitest 5 requires vite `^6.4.0 || ^7 || ^8`. Bumping to vite 8 is independent of vitest 5 itself and worth its own card so any analyzer/Vite-plugin compatibility gets checked. | t_ef1f39fa follow-up #5 |
+
 **Deferred to follow-up cards (option c in the body of t_ef1f39fa):**
 
 | Package | Old → Latest | Reason to defer | Follow-up card |
@@ -65,3 +71,18 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 - Also passes `frozen_lockfile: false` for this PR so the commander 12→15
   cross-major bump can regenerate `pnpm-lock.yaml` in CI. Restore the default
   of `true` once the lockfile is back in sync.
+
+### Acceptance — verified by PR #20 CI run
+
+- Dependency freshness gate: PASS (was FAILING on PR #16). 6 outdated deps
+  remain as advisories (the deferred majors above + the new vite 6→8 advisory
+  introduced by the vitest 5 merge).
+- Typecheck gate: PASS.
+- Build gate: PASS (commander 15 ESM-only + Node ≥22.12 holds).
+- Security audit gate: PASS (after merging vitest 2→5 from PR #17).
+- Format check gate: still FAILS — pre-existing prettier debt (tracked as
+  `t_e5d2f492`, "prettier --write to fix format check").
+- Unit tests gate: still FAILS — pre-existing `tests/integration/live.test.ts`
+  requires `dist/cli.js` to exist; the test suite doesn't trigger a build
+  first (tracked as `t_1235e511`).
+- Lint gate: skipped (intentional, until the `eslint.config.mjs` flat config lands).
