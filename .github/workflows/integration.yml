@@ -1,4 +1,4 @@
-# Minimal test workflow to isolate the parse failure.
+# Diagnostic: just the reusable call, no `secrets:` block.
 
 name: integration
 
@@ -16,8 +16,11 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
-    name: Smoke
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "smoke"
+  quality:
+    name: Quality gates
+    uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
+    with:
+      working_directory: '.'
+      node_version: '20'
+      lint_enabled: false
+      integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
