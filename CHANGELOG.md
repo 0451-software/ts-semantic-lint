@@ -42,7 +42,7 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | `tinyglobby` | `^0.2.10` | `^0.2.17` | Patch-level. |
 | `ignore` | `^7.0.0` | `^7.0.10` | Patch-level. |
 | `vitest` | `^2.1.8` | `^5.0.0` | Merged from PR #17 (security advisory clearance); adds `vite@^6.4.3` direct dep + `pnpm.overrides` pinning `vite` and `esbuild`. |
-| `eslint` | `^9.18.0` | `^10.11.0` | Requires the flat-config rewrite (`eslint.config.mjs`) that this PR also lands. Forces `engines.node: ">=22.13.0"` (eslint 10 dropped Node `<20.19`, `<22.13`). Adds `@eslint/js@^10.0.1` and `typescript-eslint@^8.70.1` to devDeps (the latter is the meta-package recommended by the typescript-eslint getting-started guide). Source changes: 4 lint fixes (2× `preserve-caught-error` for `throw new Error(msg, { cause })`, 2× dead-import cleanups in `runner.test.ts`/`output.test.ts`, plus the `EXTRACTABLE_NODE_KINDS` re-export tidy in `analyzer/index.ts`). |
+| `eslint` | `^9.18.0` | `^10.11.0` | Requires the flat-config rewrite (`eslint.config.mjs`) that this PR also lands. Forces `engines.node: ">=22.13.0"` (eslint 10 dropped Node `<20.19`, `<22.13`). Adds `@eslint/js@^10.0.1` and `typescript-eslint@^8.70.1` to devDeps (the latter is the meta-package recommended by the typescript-eslint getting-started guide). Source changes: 5 lint fixes (3× `preserve-caught-error` for `throw new Error(msg, { cause })` in `analyzer/index.ts`, `runner/evaluate.ts`, `runner/extract.ts`, plus dead-import cleanups in `runner.test.ts`, `output.test.ts`, and `analyzer/index.ts`). |
 | `@eslint/js` | _(new)_ | `^10.0.1` | Required by the flat config (`eslint.config.mjs` imports `js.configs.recommended`). |
 | `typescript-eslint` | _(new)_ | `^8.70.1` | Meta-package recommended by typescript-eslint's flat-config docs (`tseslint.config(...)` + `tseslint.configs.recommended`). |
 
@@ -77,7 +77,7 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
   `eslint.config.mjs` flat config added in this branch passes ESLint v10's
   recommended ruleset + typescript-eslint's recommended ruleset against the
   full repo (clean run on `agent/upgrade-eslint-10-t_84c2ac5d`). Lint fixups
-  in this PR: 2× `preserve-caught-error` (`analyzer/index.ts`,
+  in this PR: 3× `preserve-caught-error` (`analyzer/index.ts`,
   `runner/evaluate.ts`, `runner/extract.ts`) and dead-import cleanups in
   `runner.test.ts`/`output.test.ts`/`analyzer/index.ts`.
 
