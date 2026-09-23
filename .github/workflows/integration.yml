@@ -1,13 +1,18 @@
-# Diagnostic: bare reusable call with NO inputs.
+# Weekly + on-demand live integration test workflow.
+# Canonical caller form for 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1.
+# Mirrors the pre-PR-#14 intent (b7519cd): TYPESAFE_API_KEY reaches the integration-tests gate
+# via `secrets: inherit`; lint is disabled because the ESLint v9 flat config (`eslint.config.mjs`)
+# is documented in CONTRIBUTING.md but not yet committed — tracked as a separate follow-up.
 
 name: integration
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # manual trigger — full control
   schedule:
-    - cron: '0 8 * * 1'
+    - cron: '0 8 * * 1'     # Mondays 08:00 UTC — weekly cost-controlled run
   pull_request:
 
+# Cancel previous in-progress runs when a new one is dispatched.
 concurrency:
   group: integration-${{ github.ref }}
   cancel-in-progress: true
@@ -19,3 +24,13 @@ jobs:
   quality:
     name: Quality gates
     uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
+    with:
+      # ESLint v9 flat config is not yet committed (CONTRIBUTING.md documents `eslint.config.mjs`
+      # as "added by the cli worktree in pass 2" — not yet on main). Skip lint until that lands
+      # in a follow-up PR; default of `true` would fail every run against v9 with no flat config.
+      lint_enabled: false
+      # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
+      # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
+      integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
+    secrets:
+      inherit
