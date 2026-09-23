@@ -50,7 +50,7 @@ import {
 | `discovery.ts` | Ancestor walk + `.git` stop. |
 | `merge.ts` | `extends` + `rule_files` resolution with cycle detection (max 64 depth). |
 | `validation.ts` | Cross-field rules not expressible in Zod (override→rule references, choice→criteria references, has_body-only-for-function). |
-| `json-schema.ts` | JSON-Schema generation via `zod-to-json-schema`. |
+| `json-schema.ts` | JSON-Schema generation via Zod 4's native `z.toJSONSchema()`. |
 | `config.test.ts` | Vitest suite (15+ tests). |
 | `__fixtures__/` | Valid and invalid sample configs. |
 

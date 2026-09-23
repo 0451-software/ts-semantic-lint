@@ -55,7 +55,7 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | --- | --- | --- | --- |
 | `eslint` | `^9.18.0` → `^10.11.0` | Requires ESLint v9 flat-config (`eslint.config.mjs`) first; today the repo has none and the lint gate is disabled (`lint_enabled: false` on the caller). Bumping ESLint without a flat config would break the gate the moment someone re-enables it. | t_ef1f39fa follow-up #1 |
 | `typescript` | `^5.9.3` → `^7.0.2` | `@typescript-eslint/typescript-estree@8.70.1` peer dep is `typescript: ">=4.8.4 <6.1.0"`. The typescript-estree parser is a direct dep used at compile time by `src/analyzer/`. Bumping typescript past 6.x requires either waiting for `@typescript-eslint` to ship a major that lifts the peer cap (likely v9) or replacing typescript-estree with `typescript` itself as the parser (substantial analyzer rewrite). | t_ef1f39fa follow-up #2 |
-| `zod` | `^3.24.1` → `^4.6.5` | `zod-to-json-schema@3.25.2` is **deprecated as of Nov 2025** (its README now recommends Zod 4's native `z.toJSONSchema()`) and only accepts Zod v3 schemas via `zod/v3` even when Zod v4 is in deps. `src/config/json-schema.ts` would have to switch to native `z.toJSONSchema()`. Zod 4 also has breaking changes in error customization, `z.record` (one-arg dropped), `.strict()` (deprecated), `.format()`/`.flatten()` (deprecated), `ZodError.issues` shape, and `.nonempty()` (deprecated). | t_ef1f39fa follow-up #3 |
+| `zod` | `^3.24.1` → `^4.6.5` | **Landed in this PR** — see "Dependency upgrades — zod 3→4" below. | t_ef1f39fa follow-up #3 |
 | `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.12.0` via commander 15, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.12.0`. | t_ef1f39fa follow-up #4 |
 
 ### CI
@@ -86,3 +86,28 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
   requires `dist/cli.js` to exist; the test suite doesn't trigger a build
   first (tracked as `t_1235e511`).
 - Lint gate: skipped (intentional, until the `eslint.config.mjs` flat config lands).
+
+### Dependency upgrades — zod 3→4 (follow-up card t_ef1f39fa #3)
+
+**Landed in this PR:**
+
+| Package | Old | New | Notes |
+| --- | --- | --- | --- |
+| `zod` | `^3.24.1` | `^4.6.5` | Zod 4 ships native `z.toJSONSchema()` (added in zod@4.0) and drops support for the deprecated `zod-to-json-schema` package. Required migration in two files. |
+| `zod-to-json-schema` | `^3.25.2` | _removed_ | The package is **deprecated as of Nov 2025** (its README now recommends Zod 4's native `z.toJSONSchema()`) and only accepts Zod v3 schemas via `zod/v3` even when Zod v4 is in deps. |
+
+**Source changes:**
+
+- `src/config/json-schema.ts` — rewritten to call `z.toJSONSchema(schema, { reused: "inline", cycles: "throw" })` and wrap the result in a `{ $ref, definitions }` envelope so the on-disk shape is **byte-compatible** with the previous `zod-to-json-schema` output. Downstream consumers (IDE `$schema` users, the unit test that asserts on `definitions["ConfigFile"]`) see no change.
+  - Option mapping documented inline in the file. Notable: `markdownDescription: true` (a non-standard vendor extension from `zod-to-json-schema`) is dropped — Zod 4 has no equivalent and no consumer in this repo relied on it.
+- `src/config/schemas.ts` — migrated to Zod 4 breaking changes:
+  - All `.strict()` calls → `z.strictObject(...)` (preferred form in Zod 4; `.strict()` is deprecated but still available as a legacy escape hatch).
+  - `.nonempty({ message })` → `.min(1, { message })` (same runtime behaviour; Zod 4's `.nonempty()` is now a type-only convenience).
+  - Recursive `ConditionSchemaImpl` type annotation simplified: Zod 4 dropped the `Def` parameter from `ZodType`'s generic and eliminated `z.ZodTypeAny`; bare `z.ZodType` is the new equivalent.
+- `src/config/README.md` — `json-schema.ts` row now says "Zod 4's native `z.toJSONSchema()`" instead of "zod-to-json-schema".
+
+**Not changed (no relevant callers):**
+
+- `.format()` / `.flatten()` → deprecated in Zod 4, replaced by `z.treeifyError()`. Not used in this repo.
+- `.errors` → dropped in Zod 4 (was alias for `.issues`). Not used in this repo.
+- `z.record(key, value)` 2-arg form — preserved as-is; Zod 4 dropped the 1-arg form but our code was already 2-arg.

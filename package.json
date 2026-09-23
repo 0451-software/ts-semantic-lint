@@ -35,8 +35,7 @@
     "ignore": "^7.0.10",
     "tinyglobby": "^0.2.17",
     "undici": "^7.2.0",
-    "zod": "^3.24.1",
-    "zod-to-json-schema": "^3.25.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.20.3",
