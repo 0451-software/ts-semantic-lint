@@ -167,7 +167,7 @@ function parseOne<T>(
       | { success: true; data: T }
       | {
           success: false;
-          error: { issues: { path: (string | number)[]; message: string }[] };
+          error: { issues: { path: PropertyKey[]; message: string }[] };
         };
   },
   value: unknown,

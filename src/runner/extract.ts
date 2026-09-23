@@ -30,7 +30,7 @@ export async function extractAll(
       source = await fs.readFile(file, "utf8");
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      throw new Error(`cannot read ${file}: ${detail}`);
+      throw new Error(`cannot read ${file}: ${detail}`, { cause: error });
     }
     // `extractTargets` throws `SyntaxError` on parse failure. Let it
     // propagate — the caller decides how to surface it (CLI exit code,

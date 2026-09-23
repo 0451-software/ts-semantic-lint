@@ -6,8 +6,7 @@
 # at ./.github/workflows/_reusable-node-quality-gates.yml is byte-identical to upstream at the
 # recorded SHA; re-vendor when upstream changes.
 # Mirrors the pre-PR-#14 intent (b7519cd): TYPESAFE_API_KEY reaches the integration-tests gate
-# via `secrets: inherit`; lint is disabled because the ESLint v9 flat config (`eslint.config.mjs`)
-# is documented in CONTRIBUTING.md but not yet committed — tracked as a separate follow-up.
+# via `secrets: inherit`. Lint now runs against the ESLint v10 flat config in `eslint.config.mjs`.
 
 name: integration
 
@@ -30,10 +29,22 @@ jobs:
     name: Quality gates
     uses: ./.github/workflows/_reusable-node-quality-gates.yml
     with:
-      # ESLint v9 flat config is not yet committed (CONTRIBUTING.md documents `eslint.config.mjs`
-      # as "added by the cli worktree in pass 2" — not yet on main). Skip lint until that lands
-      # in a follow-up PR; default of `true` would fail every run against v9 with no flat config.
-      lint_enabled: false
+      # ESLint v10 flat config (`eslint.config.mjs`) is committed; lint is the default
+      # `true` so no override is set here.
+      # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
+      # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
+      integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
+      # TEMPORARY: `pnpm outdated --format json` is non-empty until the remaining
+      # deferred major-version dependency upgrades land. Two entries as of this commit:
+      #   - typescript ^5.9.3 -> ^7.0.2: blocked by `@typescript-eslint/typescript-estree@8.70.1`
+      #     peer dep `typescript: ">=4.8.4 <6.1.0"`. Needs `@typescript-eslint` v9 or a
+      #     typescript-native parser rewrite of the analyzer.
+      #   - @types/node ^22.20.3 -> ^26.6.2: typescript-eslint still types against
+      #     the Node 22.x line; bumping to 26 is a separate, low-risk follow-up.
+      # The freshness gate still RUNS and reports the table as an advisory. Remove this
+      # override once both entries above have landed and the table is empty. See
+      # CHANGELOG.md "Deferred to a follow-up card" for the per-major decision matrix.
+      fail_on_outdated: false
       # The unit-test gate runs `pnpm run test` (default), which is `vitest run` and picks up
       # EVERY test file — including tests/integration/live.test.ts. That file's `beforeAll`
       # throws `CLI not built. Run npm run build first (looked for dist/cli.js)` because
@@ -44,7 +55,7 @@ jobs:
       # the vendored copy, exclude the integration suite from the unit-test gate here so PR CI
       # goes green; the live suite still runs via the integration-tests gate on cron + dispatch.
       #
-      # `test:unit` is a new package.json script (added in this commit) that wraps
+      # `test:unit` is a new package.json script that wraps
       # `vitest run --exclude '**/integration/**'`. The reusable workflow runs scripts via
       # `pnpm run <GATE_SCRIPT>` after probing package.json for the script name, so we point
       # at the script rather than at a literal command — passing a multi-word command here
@@ -54,7 +65,4 @@ jobs:
       # Same intent on the integration-tests gate: scope it to tests/integration so it never
       # double-runs the unit suite. Matches the package.json script `test:integration` verbatim.
       integration_test_script: "test:integration"
-      # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
-      # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
-      integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
     secrets: inherit
