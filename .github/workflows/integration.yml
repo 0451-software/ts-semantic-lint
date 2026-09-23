@@ -1,41 +1,99 @@
+# Integration / quality gates for ts-semantic-lint.
+#
+# One workflow, three triggers, one reusable caller:
+#
+#   schedule (cron: Mon 08:00 UTC) — full gate suite. The weekly run is the
+#     dependency-gate cadence: advisories are published against code that has
+#     not changed, so weekly coverage of `audit` and `freshness` is the
+#     cost-controlled shape (skill: reusable-workflows, "Quality Gate
+#     Workflows"). The live Jev integration test (`pnpm run test:integration`)
+#     is also a tier-2 dependency of `integration-tests` and runs from this
+#     same caller — it self-skips when `TYPESAFE_API_KEY` is unset, but the
+#     weekly run always exercises the live API.
+#
+#   workflow_dispatch — manual run from the Actions UI. Same gate suite as
+#     the weekly cron; exists so a reviewer can retrigger without an empty
+#     commit when a gate flakes.
+#
+#   pull_request — PR lane. The cheap gates fire (`lint`, `format`,
+#     `audit`, `freshness`, `build`, `typecheck`, `unit-tests`). The
+#     integration-tests gate is disabled on PRs: the weekly cron already
+#     exercises the live Jev API, and a fork PR has no org secrets so the
+#     gate would only ever see `TYPESAFE_API_KEY` from a member-owned PR.
+#     Keeping it off the PR lane avoids burning runner minutes on
+#     API-costly work that is also covered by the cron.
+#
+# Before this change, integration.yml was a hand-rolled pipeline that did
+# checkout + npm ci + build + typecheck + unit tests + live integration in a
+# single job. The reusable brings:
+#
+#   - lint + format gates that this workflow never ran (project's eslint
+#     flat config was never committed — `lint_enabled: false` until it
+#     lands — see the gate note below),
+#   - pnpm audit (CVE gate) on every run,
+#   - pnpm outdated (freshness) on the weekly cron,
+#   - the always() guard + per-gate output pattern that protects against
+#     the `needs:` skip-cascade on disabled gates (skill pitfall).
+#
+# ──────────────────────────────────────────────────────────────────────────────
+# Why `lint_enabled: false`
+# ──────────────────────────────────────────────────────────────────────────────
+# CONTRIBUTING.md (pass 2 docs) refers to `eslint.config.mjs`, but the file
+# is not in the repo today. ESLint v9 with no flat config errors out with
+# "Could not find config file", so the gate would block every PR on a
+# pre-existing tech-debt gap that this workflow migration is not the place
+# to fix. Flip `lint_enabled: true` once the flat config lands.
+
 name: integration
 
 on:
   workflow_dispatch:        # manual trigger — full control
   schedule:
     - cron: '0 8 * * 1'     # Mondays 08:00 UTC — weekly cost-controlled run
+  pull_request:
+    branches: [main]
 
 # Cancel previous in-progress runs when a new one is dispatched
 concurrency:
   group: integration-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Typecheck
-        run: npx tsc --noEmit
-
-      - name: Unit tests
-        run: npm test
-
-      - name: Live integration tests
-        env:
-          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
-        run: npm run test:integration
+  quality:
+    name: Quality gates
+    uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1.x
+    with:
+      working_directory: '.'
+      node_version: '20'
+      # pnpm 10.x is pinned via package.json#packageManager; the reusable's
+      # setup step reads it automatically when no `pnpm_version` is passed.
+      # Per the skill pitfall: passing `version:` alongside `packageManager`
+      # makes `pnpm/action-setup@v6` fail with "Multiple versions of pnpm
+      # specified".
+      #
+      # Gates held back, each with a measured pre-existing reason:
+      #
+      #   lint_enabled: false
+      #     CONTRIBUTING.md refers to `eslint.config.mjs`, but the file is
+      #     not committed. ESLint v9 with no flat config errors out — gate
+      #     would block every PR on a pre-existing gap unrelated to this
+      #     migration. Flip to true once the flat config lands.
+      #
+      #   integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
+      #     The live integration suite hits the Jev API and requires
+      #     TYPESAFE_API_KEY. The weekly cron (Mon 08:00 UTC) and
+      #     workflow_dispatch run it; PRs do not — the cron covers the same
+      #     code path against main, and a fork PR has no org secrets, so
+      #     the gate would only ever be useful for member-owned PRs. The
+      #     suite self-skips when TYPESAFE_API_KEY is unset, so leaving
+      #     the gate on for PRs would still cost runner minutes for no
+      #     verdict.
+      #
+      # `node_version` is a literal because jobs.<job_id>.with cannot read
+      # the env context (skill pitfall).
+      lint_enabled: false
+      integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
