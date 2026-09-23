@@ -23,11 +23,7 @@ import {
 } from "./index.js";
 import { generateConfigSchema, generateRuleSchema } from "./json-schema.js";
 
-import {
-  ConfigFileSchema,
-  RuleSchema,
-  RuleIdSchema,
-} from "./schemas.js";
+import { ConfigFileSchema, RuleSchema, RuleIdSchema } from "./schemas.js";
 
 import {
   normalizeInstructions,
@@ -95,77 +91,57 @@ describe("load", () => {
   });
 
   it("loads a single rule object from `rule_files`", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
-      {
-        version: 1,
-        rule_files: ["./rule.json"],
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rule_files: ["./rule.json"],
+    });
+    await writeConfig(scratchDir, "rule.json", {
+      id: "single-rule",
+      where: { kind: "function" },
+      question: {
+        type: "choice",
+        instructions: "is it good?",
+        criteria: { yes: "y", no: "n" },
       },
-    );
-    await writeConfig(
-      scratchDir,
-      "rule.json",
-      {
-        id: "single-rule",
-        where: { kind: "function" },
-        question: {
-          type: "choice",
-          instructions: "is it good?",
-          criteria: { yes: "y", no: "n" },
+      diagnostics: [
+        {
+          when: { choice: "no" },
+          level: "warn",
+          message: "fix it",
         },
-        diagnostics: [
-          {
-            when: { choice: "no" },
-            level: "warn",
-            message: "fix it",
-          },
-        ],
-      },
-    );
+      ],
+    });
     const cfg = await load(cfgPath);
     expect(cfg.rules.has("single-rule")).toBe(true);
   });
 
   it("loads an array of rule objects from `rule_files`", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rule_files: ["./rules.json"],
+    });
+    await writeConfig(scratchDir, "rules.json", [
       {
-        version: 1,
-        rule_files: ["./rules.json"],
+        id: "r1",
+        where: { kind: "function" },
+        question: {
+          type: "choice",
+          instructions: "?",
+          criteria: { a: "a", b: "b" },
+        },
+        diagnostics: [{ when: { choice: "a" }, level: "warn", message: "msg" }],
       },
-    );
-    await writeConfig(
-      scratchDir,
-      "rules.json",
-      [
-        {
-          id: "r1",
-          where: { kind: "function" },
-          question: {
-            type: "choice",
-            instructions: "?",
-            criteria: { a: "a", b: "b" },
-          },
-          diagnostics: [
-            { when: { choice: "a" }, level: "warn", message: "msg" },
-          ],
+      {
+        id: "r2",
+        where: { kind: "class" },
+        question: {
+          type: "choice",
+          instructions: "?",
+          criteria: { a: "a", b: "b" },
         },
-        {
-          id: "r2",
-          where: { kind: "class" },
-          question: {
-            type: "choice",
-            instructions: "?",
-            criteria: { a: "a", b: "b" },
-          },
-          diagnostics: [
-            { when: { choice: "a" }, level: "warn", message: "msg" },
-          ],
-        },
-      ],
-    );
+        diagnostics: [{ when: { choice: "a" }, level: "warn", message: "msg" }],
+      },
+    ]);
     const cfg = await load(cfgPath);
     expect(cfg.rules.size).toBe(2);
     expect(cfg.rules.has("r1")).toBe(true);
@@ -207,126 +183,110 @@ describe("extends", () => {
 
 describe("validation", () => {
   it("rejects duplicate rule ids within a file", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
-      {
-        version: 1,
-        rules: [
-          {
-            id: "dup",
-            where: { kind: "function" },
-            question: {
-              type: "choice",
-              instructions: "?",
-              criteria: { a: "a", b: "b" },
-            },
-            diagnostics: [
-              { when: { choice: "a" }, level: "warn", message: "msg" },
-            ],
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "dup",
+          where: { kind: "function" },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { a: "a", b: "b" },
           },
-          {
-            id: "dup",
-            where: { kind: "class" },
-            question: {
-              type: "choice",
-              instructions: "?",
-              criteria: { a: "a", b: "b" },
-            },
-            diagnostics: [
-              { when: { choice: "a" }, level: "warn", message: "msg" },
-            ],
+          diagnostics: [
+            { when: { choice: "a" }, level: "warn", message: "msg" },
+          ],
+        },
+        {
+          id: "dup",
+          where: { kind: "class" },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { a: "a", b: "b" },
           },
-        ],
-      },
-    );
+          diagnostics: [
+            { when: { choice: "a" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
     await expect(load(cfgPath)).rejects.toThrow(/duplicate rule id "dup"/);
   });
 
   it("rejects unknown choice name in `diagnostics.when.choice`", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
-      {
-        version: 1,
-        rules: [
-          {
-            id: "bad-choice",
-            where: { kind: "function" },
-            question: {
-              type: "choice",
-              instructions: "?",
-              criteria: { yes: "y", no: "n" },
-            },
-            diagnostics: [
-              {
-                when: { choice: "maybe" }, // not in criteria
-                level: "warn",
-                message: "msg",
-              },
-            ],
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "bad-choice",
+          where: { kind: "function" },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { yes: "y", no: "n" },
           },
-        ],
-      },
-    );
+          diagnostics: [
+            {
+              when: { choice: "maybe" }, // not in criteria
+              level: "warn",
+              message: "msg",
+            },
+          ],
+        },
+      ],
+    });
     await expect(load(cfgPath)).rejects.toThrow(/unknown choice "maybe"/);
   });
 
   it("rejects `has_body` on a non-function rule", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
-      {
-        version: 1,
-        rules: [
-          {
-            id: "class-with-body",
-            where: { kind: "class", has_body: true },
-            question: {
-              type: "choice",
-              instructions: "?",
-              criteria: { yes: "y", no: "n" },
-            },
-            diagnostics: [
-              { when: { choice: "yes" }, level: "warn", message: "msg" },
-            ],
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "class-with-body",
+          where: { kind: "class", has_body: true },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { yes: "y", no: "n" },
           },
-        ],
-      },
-    );
+          diagnostics: [
+            { when: { choice: "yes" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+    });
     await expect(load(cfgPath)).rejects.toThrow(
       /has_body is only valid for function/,
     );
   });
 
   it("rejects an override that references an unknown rule id", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
-      {
-        version: 1,
-        rules: [
-          {
-            id: "real-rule",
-            where: { kind: "function" },
-            question: {
-              type: "choice",
-              instructions: "?",
-              criteria: { yes: "y", no: "n" },
-            },
-            diagnostics: [
-              { when: { choice: "yes" }, level: "warn", message: "msg" },
-            ],
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "real-rule",
+          where: { kind: "function" },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { yes: "y", no: "n" },
           },
-        ],
-        overrides: [
-          {
-            files: ["**/*.ts"],
-            rules: { "missing-rule": "warn" },
-          },
-        ],
-      },
-    );
+          diagnostics: [
+            { when: { choice: "yes" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+      overrides: [
+        {
+          files: ["**/*.ts"],
+          rules: { "missing-rule": "warn" },
+        },
+      ],
+    });
     await expect(load(cfgPath)).rejects.toThrow(/unknown rule "missing-rule"/);
   });
 });
@@ -335,33 +295,29 @@ describe("validation", () => {
 
 describe("Config.settingFor", () => {
   it("returns the last matching override's setting for a file+rule", async () => {
-    const cfgPath = await writeConfig(
-      scratchDir,
-      "ts-semantic-lint.json",
-      {
-        version: 1,
-        rules: [
-          {
-            id: "r",
-            where: { kind: "function" },
-            question: {
-              type: "choice",
-              instructions: "?",
-              criteria: { yes: "y", no: "n" },
-            },
-            diagnostics: [
-              { when: { choice: "yes" }, level: "warn", message: "msg" },
-            ],
+    const cfgPath = await writeConfig(scratchDir, "ts-semantic-lint.json", {
+      version: 1,
+      rules: [
+        {
+          id: "r",
+          where: { kind: "function" },
+          question: {
+            type: "choice",
+            instructions: "?",
+            criteria: { yes: "y", no: "n" },
           },
-        ],
-        overrides: [
-          // Earlier override sets `off` for everything.
-          { files: ["**/*.ts"], rules: { r: "off" } },
-          // Later override sets `error` for the tests directory — must win.
-          { files: ["tests/**"], rules: { r: "error" } },
-        ],
-      },
-    );
+          diagnostics: [
+            { when: { choice: "yes" }, level: "warn", message: "msg" },
+          ],
+        },
+      ],
+      overrides: [
+        // Earlier override sets `off` for everything.
+        { files: ["**/*.ts"], rules: { r: "off" } },
+        // Later override sets `error` for the tests directory — must win.
+        { files: ["tests/**"], rules: { r: "error" } },
+      ],
+    });
     // Create the on-disk files so tinyglobby can match them.
     await mkdir(join(scratchDir, "tests"), { recursive: true });
     await mkdir(join(scratchDir, "src"), { recursive: true });
@@ -390,7 +346,10 @@ describe("discover", () => {
     //        <scratchDir>/ts-semantic-lint.json
     await mkdir(join(scratchDir, ".git"), { recursive: true });
     await mkdir(join(scratchDir, "sub", "deeper"), { recursive: true });
-    await writeFile(join(scratchDir, "sub", "deeper", "file.ts"), "export {};\n");
+    await writeFile(
+      join(scratchDir, "sub", "deeper", "file.ts"),
+      "export {};\n",
+    );
     await writeConfig(scratchDir, CONFIG_NAME, {
       version: 1,
       rules: [
@@ -402,9 +361,7 @@ describe("discover", () => {
             instructions: "?",
             criteria: { a: "a", b: "b" },
           },
-          diagnostics: [
-            { when: { choice: "a" }, level: "warn", message: "m" },
-          ],
+          diagnostics: [{ when: { choice: "a" }, level: "warn", message: "m" }],
         },
       ],
     });
@@ -446,7 +403,8 @@ describe("structured criteria and instructions", () => {
             criteria: {
               clear: {
                 what: "The reader can act on it without follow-up questions.",
-                not_for: "Edge cases where correctness matters more than clarity.",
+                not_for:
+                  "Edge cases where correctness matters more than clarity.",
                 examples: ["Adds two integers", "Returns the user's age"],
               },
               unclear: {
@@ -536,8 +494,8 @@ describe("structured criteria and instructions", () => {
       buildStructuredConfig(),
     );
     const cfg = await load(cfgPath);
-    const criteria = cfg.rules.get("structured-rule")?.definition.question
-      .criteria;
+    const criteria =
+      cfg.rules.get("structured-rule")?.definition.question.criteria;
     expect(criteria).toBeDefined();
     const clear = criteria?.["clear"];
     expect(typeof clear).toBe("object");
@@ -548,7 +506,10 @@ describe("structured criteria and instructions", () => {
       expect(clear.not_for).toBe(
         "Edge cases where correctness matters more than clarity.",
       );
-      expect(clear.examples).toEqual(["Adds two integers", "Returns the user's age"]);
+      expect(clear.examples).toEqual([
+        "Adds two integers",
+        "Returns the user's age",
+      ]);
     }
   });
 
@@ -736,15 +697,12 @@ describe("JSON Schema", () => {
       $ref?: string;
       definitions?: Record<string, unknown>;
     };
-    expect(root.$schema).toBe(
-      "https://json-schema.org/draft/2020-12/schema",
-    );
+    expect(root.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
     expect(root.definitions).toBeDefined();
     const defs = root.definitions ?? {};
     expect(Object.keys(defs).length).toBeGreaterThan(0);
     const cfg = defs["ConfigFile"] as
-      | { properties?: Record<string, unknown>; required?: string[] }
-      | undefined;
+      { properties?: Record<string, unknown>; required?: string[] } | undefined;
     expect(cfg).toBeDefined();
     expect(cfg?.properties).toBeDefined();
     expect(cfg?.properties?.["rules"]).toBeDefined();
@@ -808,10 +766,12 @@ describe("FileFilter", () => {
     expect(
       await f.matches(join(scratchDir, "node_modules", "foo.ts"), scratchDir),
     ).toBe(false);
-    expect(
-      await f.matches(join(scratchDir, ".git", "HEAD"), scratchDir),
-    ).toBe(false);
-    expect(await f.matches(join(scratchDir, "src", "ok.ts"), scratchDir)).toBe(true);
+    expect(await f.matches(join(scratchDir, ".git", "HEAD"), scratchDir)).toBe(
+      false,
+    );
+    expect(await f.matches(join(scratchDir, "src", "ok.ts"), scratchDir)).toBe(
+      true,
+    );
   });
 });
 

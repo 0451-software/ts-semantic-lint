@@ -21,8 +21,7 @@ export type ParserDirective =
   | { readonly kind: "parseError"; readonly message: string };
 
 export type ParserResult =
-  | { readonly kind: "options"; readonly options: CliOptions }
-  | ParserDirective;
+  { readonly kind: "options"; readonly options: CliOptions } | ParserDirective;
 
 /**
  * Parse argv into either structured options or an early-exit
@@ -92,14 +91,19 @@ function buildCommand(): Command {
 
   cmd.argument("[paths...]", "Files/dirs to lint (default: scan config dir)");
 
-  cmd.option("--config <path>", "Override config discovery (skips walking up from cwd)");
-  cmd.addOption(
-    new Option("--check-config", "Validate + exit, no lint").conflicts(["--dry-run"]),
+  cmd.option(
+    "--config <path>",
+    "Override config discovery (skips walking up from cwd)",
   );
   cmd.addOption(
-    new Option("--dry-run", "Print Jev requests as JSON, no network").conflicts([
-      "--check-config",
+    new Option("--check-config", "Validate + exit, no lint").conflicts([
+      "--dry-run",
     ]),
+  );
+  cmd.addOption(
+    new Option("--dry-run", "Print Jev requests as JSON, no network").conflicts(
+      ["--check-config"],
+    ),
   );
   cmd.addOption(
     new Option("--format <fmt>", "Output format (default: text)").choices([
@@ -109,12 +113,7 @@ function buildCommand(): Command {
   );
   cmd.option("--errors-only", "Hide warnings from output");
   cmd.option("--deny-warnings", "Exit 1 when warnings are present");
-  cmd.option(
-    "--jobs <N>",
-    "Concurrency (default 64)",
-    parseJobs,
-    DEFAULT_JOBS,
-  );
+  cmd.option("--jobs <N>", "Concurrency (default 64)", parseJobs, DEFAULT_JOBS);
   cmd.addOption(
     new Option("--color <mode>", "Color policy")
       .choices(["auto", "always", "never"])

@@ -34,8 +34,7 @@ export const RuleIdSchema = z
   .string()
   .min(1, { message: "rule id must not be empty" })
   .regex(/^[a-zA-Z0-9._-]+$/, {
-    message:
-      "rule ids must contain only letters, digits, '.', '_' or '-'",
+    message: "rule ids must contain only letters, digits, '.', '_' or '-'",
   });
 
 /**
@@ -96,10 +95,11 @@ export const SelectorSchema = z
  */
 export const StructuredInstructionsSchema = z
   .object({
-    question: z.string().min(1).transform((s) => s.trim()).refine(
-      (s) => s.length > 0,
-      { message: "question must not be empty" },
-    ),
+    question: z
+      .string()
+      .min(1)
+      .transform((s) => s.trim())
+      .refine((s) => s.length > 0, { message: "question must not be empty" }),
     focus: z.string().optional(),
     inspect: z.string().optional(),
   })
@@ -141,15 +141,13 @@ export const ChoiceQuestionSchema = z
         }),
       StructuredInstructionsSchema,
     ]),
-    criteria: z
-      .record(z.string().min(1), ChoiceCriterionSchema)
-      .refine(
-        (c) => {
-          const n = Object.keys(c).length;
-          return n >= 2 && n <= 255;
-        },
-        { message: "a choice question requires 2 to 255 choices" },
-      ),
+    criteria: z.record(z.string().min(1), ChoiceCriterionSchema).refine(
+      (c) => {
+        const n = Object.keys(c).length;
+        return n >= 2 && n <= 255;
+      },
+      { message: "a choice question requires 2 to 255 choices" },
+    ),
   })
   .strict();
 
@@ -164,14 +162,13 @@ export const ChoiceProbabilitySchema = z
     max: ProbabilitySchema.optional(),
   })
   .strict()
-  .refine(
-    (v) => v.min === undefined || v.max === undefined || v.min <= v.max,
-    { message: "probability min exceeds max", path: ["min"] },
-  )
-  .refine(
-    (v) => v.min !== undefined || v.max !== undefined,
-    { message: "probability needs min or max" },
-  );
+  .refine((v) => v.min === undefined || v.max === undefined || v.min <= v.max, {
+    message: "probability min exceeds max",
+    path: ["min"],
+  })
+  .refine((v) => v.min !== undefined || v.max !== undefined, {
+    message: "probability needs min or max",
+  });
 
 // ─── Condition ───────────────────────────────────────────────────────────────
 
@@ -293,9 +290,12 @@ export const ConfigFileSchema = z
       .transform((s) => s.trim())
       .refine((s) => s.length > 0, { message: "model must not be empty" })
       .optional(),
-    include: z.array(z.string().min(1)).nonempty({
-      message: "include must contain at least one file pattern",
-    }).optional(),
+    include: z
+      .array(z.string().min(1))
+      .nonempty({
+        message: "include must contain at least one file pattern",
+      })
+      .optional(),
     exclude: z.array(z.string().min(1)).default([]),
     rules: z.array(RuleSchema).default([]),
     rule_files: z.array(z.string().min(1)).default([]),

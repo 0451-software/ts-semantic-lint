@@ -28,15 +28,15 @@ review — it's the public contract.
 
 ## ErisLint → ts-semantic-lint Translation Map
 
-| ErisLint concept | TS equivalent |
-|---|---|
-| `ra_ap_syntax` AST | `@typescript-eslint/typescript-estree` AST |
-| `syntax.kind` (Function, Struct, …) | `TSESTree.Node['type']` (FunctionDeclaration, TSInterfaceDeclaration, …) |
-| `syntax.file` | `{ path: string, content: string, text: string }` |
-| `SyntaxTarget { kind, name, file, has_body, … }` | `LintedTarget` — see `src/types.ts` |
-| Jev `Choice` question | `JevChoiceQuestion` — see `src/jev/types.ts` |
-| `Rule` + `Diagnostic` | `Rule` + `Policy` — see `src/policy/types.ts` |
-| `JevClient.evaluate()` | `evaluateTargets()` — see `src/runner/index.ts` |
+| ErisLint concept                                 | TS equivalent                                                            |
+| ------------------------------------------------ | ------------------------------------------------------------------------ |
+| `ra_ap_syntax` AST                               | `@typescript-eslint/typescript-estree` AST                               |
+| `syntax.kind` (Function, Struct, …)              | `TSESTree.Node['type']` (FunctionDeclaration, TSInterfaceDeclaration, …) |
+| `syntax.file`                                    | `{ path: string, content: string, text: string }`                        |
+| `SyntaxTarget { kind, name, file, has_body, … }` | `LintedTarget` — see `src/types.ts`                                      |
+| Jev `Choice` question                            | `JevChoiceQuestion` — see `src/jev/types.ts`                             |
+| `Rule` + `Diagnostic`                            | `Rule` + `Policy` — see `src/policy/types.ts`                            |
+| `JevClient.evaluate()`                           | `evaluateTargets()` — see `src/runner/index.ts`                          |
 
 ## File Targets
 
@@ -70,6 +70,7 @@ support is deferred). `.d.ts` files are excluded by default.
 ## PR Discipline
 
 Each module PR must:
+
 1. Be self-contained: own tests, own fixtures, no broken imports if other
    modules don't exist yet.
 2. Stub external module interfaces using `// TODO(pass-2):` markers in a
@@ -79,6 +80,7 @@ Each module PR must:
 ## Final Integration (orchestrator-owned)
 
 After all PRs land, the orchestrator:
+
 1. Resolves any cross-module merge conflicts.
 2. Wires `src/runner/index.ts` against real implementations.
 3. Removes `src/__stubs__.ts`.

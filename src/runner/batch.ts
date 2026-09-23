@@ -14,19 +14,13 @@
 import { z } from "zod";
 
 import type { Config } from "../config/index.js";
-import {
-  InputContextSchema,
-  type RuleInput,
-} from "../config/schemas.js";
+import { InputContextSchema, type RuleInput } from "../config/schemas.js";
 import {
   toWireQuestion,
   type Question,
   type Request as JevRequest,
 } from "../jev/types.js";
-import type {
-  LintedTarget,
-  RuleContext,
-} from "../types.js";
+import type { LintedTarget, RuleContext } from "../types.js";
 
 /** Per-bucket InputContext — derived from the Zod schema. */
 export type InputContext = z.infer<typeof InputContextSchema>;

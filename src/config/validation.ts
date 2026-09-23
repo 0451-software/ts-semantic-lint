@@ -126,10 +126,7 @@ function checkCondition(
  * Run all cross-field rule validation. Safe to call once per rule after
  * structural parsing.
  */
-export function validateRuleSemantics(
-  rule: RuleInput,
-  rulePath: string,
-): void {
+export function validateRuleSemantics(rule: RuleInput, rulePath: string): void {
   validateHasBodyOnlyForFunction(rule, rulePath);
   validateConditionChoiceRefs(rule, rulePath);
 }

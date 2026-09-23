@@ -36,12 +36,18 @@ import {
 } from "./__fixtures__/index.js";
 
 /** Find the first target with the given internal kind. */
-function findTarget(targets: ReturnType<typeof extractTargets>, kind: string, name?: string) {
+function findTarget(
+  targets: ReturnType<typeof extractTargets>,
+  kind: string,
+  name?: string,
+) {
   const matches = targets.filter(
     (t) => t.kind === kind && (name === undefined || t.name === name),
   );
   if (matches.length === 0) {
-    throw new Error(`No target with kind=${kind} name=${name}; got ${targets.map((t) => `${t.kind}:${t.name}`).join(", ")}`);
+    throw new Error(
+      `No target with kind=${kind} name=${name}; got ${targets.map((t) => `${t.kind}:${t.name}`).join(", ")}`,
+    );
   }
   return matches[0];
 }
@@ -66,7 +72,8 @@ describe("extractTargets — basic kinds", () => {
     const targets = extractTargets(NAMED_ARROW, "/abs/file.ts");
     const arrow = findTarget(targets, "function", "greet");
     expect(arrow).toBeDefined();
-    const state = (arrow as unknown as { state: Record<string, unknown> }).state;
+    const state = (arrow as unknown as { state: Record<string, unknown> })
+      .state;
     expect(state.params).toEqual([{ pattern: "name: string", type: "string" }]);
     expect(state.returnType).toBe("string");
   });
@@ -96,7 +103,9 @@ describe("extractTargets — basic kinds", () => {
     ]);
     expect((state.methods as unknown[]).length).toBeGreaterThanOrEqual(2);
     // Methods include snippets of the original source.
-    const snippets = (state.methods as Array<{ snippet: string }>).map((m) => m.snippet);
+    const snippets = (state.methods as Array<{ snippet: string }>).map(
+      (m) => m.snippet,
+    );
     expect(snippets.join("\n")).toContain("add(");
     expect(snippets.join("\n")).toContain("current(");
   });
@@ -105,7 +114,8 @@ describe("extractTargets — basic kinds", () => {
     const targets = extractTargets(INTERFACE_DECL, "/abs/file.ts");
     const iface = findTarget(targets, "interface", "Measurable");
     expect(iface.name).toBe("Measurable");
-    const state = (iface as unknown as { state: Record<string, unknown> }).state;
+    const state = (iface as unknown as { state: Record<string, unknown> })
+      .state;
     expect((state.members as unknown[]).length).toBe(2);
     expect((state.members as string[]).join("\n")).toContain("readonly length");
   });
@@ -127,7 +137,8 @@ describe("extractTargets — basic kinds", () => {
     const targets = extractTargets(TYPE_ALIAS, "/abs/file.ts");
     const alias = findTarget(targets, "type", "UserId");
     expect(alias.name).toBe("UserId");
-    const state = (alias as unknown as { state: Record<string, unknown> }).state;
+    const state = (alias as unknown as { state: Record<string, unknown> })
+      .state;
     expect(state.aliased).toContain("UserId");
   });
 
@@ -180,7 +191,8 @@ describe("extractTargets — enclosing", () => {
     // class expression) shows up as a child target but its enclosing should
     // be Outer.
     const innerClass = targets.find(
-      (t) => t.kind === "class" && t.file.endsWith("file.ts") && t.name !== "Outer",
+      (t) =>
+        t.kind === "class" && t.file.endsWith("file.ts") && t.name !== "Outer",
     );
     if (innerClass) {
       const outerScope = innerClass.enclosing[0];
@@ -237,14 +249,17 @@ describe("extractTargets — defaults", () => {
     const targets = extractTargets(SIMPLE_FUNCTION, "/abs/file.ts");
     const fileTarget = findTarget(targets, "file");
     expect(fileTarget.file).toBe("/abs/file.ts");
-    const state = (fileTarget as unknown as { state: Record<string, unknown> }).state;
+    const state = (fileTarget as unknown as { state: Record<string, unknown> })
+      .state;
     expect(state.contents).toBe(SIMPLE_FUNCTION);
   });
 });
 
 describe("extractTargets — error handling", () => {
   it("throws SyntaxError when the source has a syntax error", () => {
-    expect(() => extractTargets(SYNTAX_ERROR, "/abs/file.ts")).toThrowError(SyntaxError);
+    expect(() => extractTargets(SYNTAX_ERROR, "/abs/file.ts")).toThrowError(
+      SyntaxError,
+    );
   });
 
   it("includes the line and column in the thrown message", () => {

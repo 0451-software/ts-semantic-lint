@@ -29,8 +29,7 @@ export async function extractAll(
     try {
       source = await fs.readFile(file, "utf8");
     } catch (error) {
-      const detail =
-        error instanceof Error ? error.message : String(error);
+      const detail = error instanceof Error ? error.message : String(error);
       throw new Error(`cannot read ${file}: ${detail}`);
     }
     // `extractTargets` throws `SyntaxError` on parse failure. Let it

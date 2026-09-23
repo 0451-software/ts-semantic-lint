@@ -26,8 +26,8 @@ Full pipeline. Returns `RunnerResult`:
 
 ```ts
 interface RunnerResult {
-  diagnostics: readonly Diagnostic[];          // sorted by (file, line, column, ruleId)
-  answers: ReadonlyMap<string, JevAnswer>;    // keyed by `${ruleId}::${targetKey}`
+  diagnostics: readonly Diagnostic[]; // sorted by (file, line, column, ruleId)
+  answers: ReadonlyMap<string, JevAnswer>; // keyed by `${ruleId}::${targetKey}`
   filesScanned: number;
   targetsEvaluated: number;
 }
@@ -39,7 +39,7 @@ interface RunnerResult {
 interface RunnerOptions {
   config: Config;
   client: JevClient;
-  jobs: number;             // bounded concurrency (default 64)
+  jobs: number; // bounded concurrency (default 64)
   onRetry?: (msg: string) => void;
 }
 ```
@@ -48,19 +48,19 @@ interface RunnerOptions {
 
 Build Jev requests without calling `JevClient.evaluate()`. Used by
 `--dry-run`. Returns `{ requests, targets }` where `requests` is the
-list of Jev requests that *would* be sent and `targets` is the number
+list of Jev requests that _would_ be sent and `targets` is the number
 of targets that matched at least one rule.
 
 ## Sub-modules
 
-| File | Role |
-|---|---|
-| `scan.ts` | Walk + filter file paths. Always excludes `node_modules`, `dist`, `.git`, `coverage`, `target`. |
-| `extract.ts` | Read each file with `fs/promises.readFile` and call `extractTargets`. Throws on syntax error. |
-| `match.ts` | For each `(target, rule)` decide if the rule applies. Annotates `target.appliedRules`. |
-| `batch.ts` | Group annotated targets by `(ruleId, context)` → Jev `Request[]`. |
-| `evaluate.ts` | Run Jev per batch, call `policy.evaluateRule`, sort diagnostics, bubble up errors. |
-| `progress.ts` | stderr progress reporter. Hidden when `TS_SEMANTIC_LINT_QUIET=1`. |
+| File          | Role                                                                                            |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `scan.ts`     | Walk + filter file paths. Always excludes `node_modules`, `dist`, `.git`, `coverage`, `target`. |
+| `extract.ts`  | Read each file with `fs/promises.readFile` and call `extractTargets`. Throws on syntax error.   |
+| `match.ts`    | For each `(target, rule)` decide if the rule applies. Annotates `target.appliedRules`.          |
+| `batch.ts`    | Group annotated targets by `(ruleId, context)` → Jev `Request[]`.                               |
+| `evaluate.ts` | Run Jev per batch, call `policy.evaluateRule`, sort diagnostics, bubble up errors.              |
+| `progress.ts` | stderr progress reporter. Hidden when `TS_SEMANTIC_LINT_QUIET=1`.                               |
 
 ## Pipeline flow
 

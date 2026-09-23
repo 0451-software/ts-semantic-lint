@@ -16,27 +16,12 @@ import { dirname } from "node:path";
 import { CONFIG_NAME } from "./config-name.js";
 import { discover } from "./discovery.js";
 import { ConfigError, FileFilter } from "./filter.js";
-import {
-  mergeFromPath,
-  type MergedConfig,
-} from "./merge.js";
-import type {
-  OverrideInput,
-  RuleInput,
-  RuleSettingInput,
-} from "./schemas.js";
-import {
-  validateAllRules,
-  validateOverrides,
-} from "./validation.js";
+import { mergeFromPath, type MergedConfig } from "./merge.js";
+import type { OverrideInput, RuleInput, RuleSettingInput } from "./schemas.js";
+import { validateAllRules, validateOverrides } from "./validation.js";
 
 export { CONFIG_NAME, discover, ConfigError, FileFilter, mergeFromPath };
-export type {
-  MergedConfig,
-  RuleInput,
-  OverrideInput,
-  RuleSettingInput,
-};
+export type { MergedConfig, RuleInput, OverrideInput, RuleSettingInput };
 
 /** Default include globs when config omits `include`. */
 export const DEFAULT_INCLUDE: readonly string[] = Object.freeze([

@@ -12,19 +12,19 @@ ts-semantic-lint [options] [paths...]
 
 ## Flags
 
-| Flag | Behavior |
-|------|----------|
-| `[paths...]` | Files / directories to lint. Defaults to scanning the config directory. |
-| `--config <path>` | Override config discovery. Skips walking up from `cwd` to find `ts-semantic-lint.json`. |
-| `--check-config` | Validate + exit, no lint. Prints `Configuration valid: N rules (<path>)` on success. |
-| `--dry-run` | Print Jev requests as JSON to stdout, no network calls. |
-| `--format <text\|json>` | Diagnostic output format. Default: `text`. `compact` is reserved for a later batch. |
-| `--errors-only` | Hide warnings from output. The exit-status rules still apply to the full run. |
-| `--deny-warnings` | Exit 1 when warnings are present (in addition to the default exit 1 on errors). |
-| `--jobs <N>` | Concurrency for Jev requests. Default: 64. Must be a positive integer. |
-| `--color <auto\|always\|never>` | Force or disable color in text output. `auto` honors `NO_COLOR` and TTY detection. |
-| `--version` | Print the package version, exit 0. |
-| `--help` | Print usage, exit 0. |
+| Flag                            | Behavior                                                                                |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `[paths...]`                    | Files / directories to lint. Defaults to scanning the config directory.                 |
+| `--config <path>`               | Override config discovery. Skips walking up from `cwd` to find `ts-semantic-lint.json`. |
+| `--check-config`                | Validate + exit, no lint. Prints `Configuration valid: N rules (<path>)` on success.    |
+| `--dry-run`                     | Print Jev requests as JSON to stdout, no network calls.                                 |
+| `--format <text\|json>`         | Diagnostic output format. Default: `text`. `compact` is reserved for a later batch.     |
+| `--errors-only`                 | Hide warnings from output. The exit-status rules still apply to the full run.           |
+| `--deny-warnings`               | Exit 1 when warnings are present (in addition to the default exit 1 on errors).         |
+| `--jobs <N>`                    | Concurrency for Jev requests. Default: 64. Must be a positive integer.                  |
+| `--color <auto\|always\|never>` | Force or disable color in text output. `auto` honors `NO_COLOR` and TTY detection.      |
+| `--version`                     | Print the package version, exit 0.                                                      |
+| `--help`                        | Print usage, exit 0.                                                                    |
 
 ## Environment
 
@@ -38,11 +38,11 @@ ts-semantic-lint [options] [paths...]
 
 ## Exit codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | No errors; warnings allowed. |
-| `1` | Errors present, OR warnings present with `--deny-warnings`. |
-| `2` | Config / parse / auth / API / operational failure. |
+| Code | Meaning                                                     |
+| ---- | ----------------------------------------------------------- |
+| `0`  | No errors; warnings allowed.                                |
+| `1`  | Errors present, OR warnings present with `--deny-warnings`. |
+| `2`  | Config / parse / auth / API / operational failure.          |
 
 ## Programmatic use
 
