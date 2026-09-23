@@ -96,3 +96,4 @@ jobs:
       # the env context (skill pitfall).
       lint_enabled: false
       integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit
