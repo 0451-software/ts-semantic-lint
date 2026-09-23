@@ -53,7 +53,9 @@ function columnWithinSnippet(
   return { start: column, end: column + match[0].length - 1 };
 }
 
-function firstIdentifier(snippet: string): { start: number; end: number } | undefined {
+function firstIdentifier(
+  snippet: string,
+): { start: number; end: number } | undefined {
   const match = /[A-Za-z_$][A-Za-z0-9_$]*/.exec(snippet);
   if (!match) return undefined;
   return { start: match.index + 1, end: match.index + match[0].length };

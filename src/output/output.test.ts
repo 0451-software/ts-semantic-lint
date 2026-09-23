@@ -35,12 +35,16 @@ import {
 describe("sortDiagnostics", () => {
   it("sorts by (file asc, line asc, column asc, ruleId asc)", () => {
     const sorted = sortDiagnostics(ALL_DIAGNOSTICS);
-    expect(sorted.map((d) => `${d.file}:${d.range.start.line}:${d.range.start.column}:${d.ruleId}`))
-      .toEqual([
-        `${FILE_A}:1:17:function-simplicity`,
-        `${FILE_A}:10:6:type-naming`,
-        `${FILE_B}:2:14:unused-export`,
-      ]);
+    expect(
+      sorted.map(
+        (d) =>
+          `${d.file}:${d.range.start.line}:${d.range.start.column}:${d.ruleId}`,
+      ),
+    ).toEqual([
+      `${FILE_A}:1:17:function-simplicity`,
+      `${FILE_A}:10:6:type-naming`,
+      `${FILE_B}:2:14:unused-export`,
+    ]);
   });
 
   it("compareDiagnostics returns 0 for identical diagnostics", () => {
@@ -112,7 +116,10 @@ describe("renderJson / buildJson / summarize", () => {
   it("summarize counts errors and warnings separately", () => {
     expect(summarize(ALL_DIAGNOSTICS)).toEqual({ errors: 1, warnings: 2 });
     expect(summarize([])).toEqual({ errors: 0, warnings: 0 });
-    expect(summarize([DIAG_ERROR_B, DIAG_ERROR_B])).toEqual({ errors: 2, warnings: 0 });
+    expect(summarize([DIAG_ERROR_B, DIAG_ERROR_B])).toEqual({
+      errors: 2,
+      warnings: 0,
+    });
   });
 });
 
@@ -175,7 +182,10 @@ describe("render — integration", () => {
   });
 
   it("JSON errorsOnly drops warnings but still counts them", () => {
-    const result = render(ALL_DIAGNOSTICS, { format: "json", errorsOnly: true });
+    const result = render(ALL_DIAGNOSTICS, {
+      format: "json",
+      errorsOnly: true,
+    });
     const parsed = JSON.parse(result.stdout) as {
       summary: { errors: number; warnings: number };
       diagnostics: { level: string }[];

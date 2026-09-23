@@ -35,18 +35,18 @@ message includes the line and column of the first reported issue.
 
 ## Extracted kinds
 
-| AST node | `LintedTarget.kind` |
-|----------|---------------------|
-| `FunctionDeclaration` | `function` |
-| `TSDeclareFunction` (`declare function …`) | `function` |
-| `ArrowFunctionExpression` | `function` |
-| `MethodDefinition` | `function` |
-| `ClassDeclaration` / `ClassExpression` | `class` |
-| `TSInterfaceDeclaration` | `interface` |
-| `TSTypeAliasDeclaration` | `type` |
-| `TSEnumDeclaration` | `enum` |
-| `TSModuleDeclaration` (`namespace`) | `module` |
-| `Program` (whole file) | `file` |
+| AST node                                   | `LintedTarget.kind` |
+| ------------------------------------------ | ------------------- |
+| `FunctionDeclaration`                      | `function`          |
+| `TSDeclareFunction` (`declare function …`) | `function`          |
+| `ArrowFunctionExpression`                  | `function`          |
+| `MethodDefinition`                         | `function`          |
+| `ClassDeclaration` / `ClassExpression`     | `class`             |
+| `TSInterfaceDeclaration`                   | `interface`         |
+| `TSTypeAliasDeclaration`                   | `type`              |
+| `TSEnumDeclaration`                        | `enum`              |
+| `TSModuleDeclaration` (`namespace`)        | `module`            |
+| `Program` (whole file)                     | `file`              |
 
 For each target we attach a rich `state` field (custom, not part of
 `LintedTarget`) containing the parameters, return type, body, modifiers,

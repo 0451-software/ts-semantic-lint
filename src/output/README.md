@@ -22,12 +22,12 @@ const parsed = JSON.parse(json.stdout);
 
 ## `RenderOptions`
 
-| Field         | Type                          | Default      | Notes                                    |
-|---------------|-------------------------------|--------------|------------------------------------------|
-| `format`      | `"text"` \| `"json"`          | —            | `"compact"` deferred.                    |
-| `color`       | `"auto"` \| `"always"` \| `"never"` | `"auto"` | `NO_COLOR` honored in `auto`.            |
-| `errorsOnly`  | `boolean`                     | `false`      | Drops warns from output, not from counts.|
-| `noColor`     | `boolean`                     | `false`      | Legacy; equivalent to `color: "never"`.  |
+| Field        | Type                                | Default  | Notes                                     |
+| ------------ | ----------------------------------- | -------- | ----------------------------------------- |
+| `format`     | `"text"` \| `"json"`                | —        | `"compact"` deferred.                     |
+| `color`      | `"auto"` \| `"always"` \| `"never"` | `"auto"` | `NO_COLOR` honored in `auto`.             |
+| `errorsOnly` | `boolean`                           | `false`  | Drops warns from output, not from counts. |
+| `noColor`    | `boolean`                           | `false`  | Legacy; equivalent to `color: "never"`.   |
 
 ## `RenderResult`
 
@@ -38,7 +38,7 @@ interface RenderResult {
 }
 ```
 
-Counts always reflect the *full* input list, before `errorsOnly`.
+Counts always reflect the _full_ input list, before `errorsOnly`.
 
 ## Sort order
 
@@ -47,12 +47,12 @@ same comparator (`./sort.ts`).
 
 ## Files
 
-| File                  | Purpose                                       |
-|-----------------------|-----------------------------------------------|
-| `index.ts`            | `render()` dispatch                           |
-| `text.ts`             | Rust-style text blocks with carets            |
-| `json.ts`             | Stable JSON envelope                          |
-| `sort.ts`             | `(file, line, col, ruleId)` ordering          |
-| `ansi.ts`             | ANSI helpers + `NO_COLOR` handling            |
-| `output.test.ts`      | vitest tests                                  |
-| `__fixtures__/`       | Sample diagnostics                            |
+| File             | Purpose                              |
+| ---------------- | ------------------------------------ |
+| `index.ts`       | `render()` dispatch                  |
+| `text.ts`        | Rust-style text blocks with carets   |
+| `json.ts`        | Stable JSON envelope                 |
+| `sort.ts`        | `(file, line, col, ruleId)` ordering |
+| `ansi.ts`        | ANSI helpers + `NO_COLOR` handling   |
+| `output.test.ts` | vitest tests                         |
+| `__fixtures__/`  | Sample diagnostics                   |

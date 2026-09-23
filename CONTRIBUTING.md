@@ -55,6 +55,7 @@ review — it's the public contract.
 ## PR Discipline
 
 Each module PR must:
+
 1. Be self-contained: own tests, own fixtures, no broken imports if other
    modules don't exist yet.
 2. Stub external module interfaces via dependency injection if needed.
@@ -63,6 +64,7 @@ Each module PR must:
 ## Final Integration (orchestrator-owned)
 
 After all PRs land, the orchestrator:
+
 1. Resolves any cross-module merge conflicts.
 2. Wires `src/runner/index.ts` against real implementations.
 3. Writes `tests/integration.test.ts` end-to-end CLI test.

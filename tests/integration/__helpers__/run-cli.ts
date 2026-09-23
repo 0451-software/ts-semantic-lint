@@ -76,7 +76,10 @@ export function runCli(opts: RunCliOptions): Promise<CliResult> {
   const entry = cliEntryPath();
   const cwd = opts.cwd ?? process.cwd();
   const env: NodeJS.ProcessEnv = { ...process.env, ...(opts.env ?? {}) };
-  if (env["jev_key"] === undefined && typeof env["TYPESAFE_API_KEY"] === "string") {
+  if (
+    env["jev_key"] === undefined &&
+    typeof env["TYPESAFE_API_KEY"] === "string"
+  ) {
     env["jev_key"] = env["TYPESAFE_API_KEY"];
   }
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -108,7 +111,9 @@ export function runCli(opts: RunCliOptions): Promise<CliResult> {
       clearTimeout(timer);
       const stdout = Buffer.concat(stdoutChunks).toString("utf8");
       const stderr = Buffer.concat(stderrChunks).toString("utf8");
-      const exitCode = killed ? 124 : code ?? (signal === "SIGKILL" ? 137 : 1);
+      const exitCode = killed
+        ? 124
+        : (code ?? (signal === "SIGKILL" ? 137 : 1));
       const trimmed = stdout.trim();
       let json: unknown = undefined;
       if (trimmed.length > 0) {

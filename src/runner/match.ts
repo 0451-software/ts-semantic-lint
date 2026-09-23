@@ -12,15 +12,8 @@ import ignore from "ignore";
 import * as path from "node:path";
 
 import type { Config } from "../config/index.js";
-import {
-  AST_KINDS_BY_INTERNAL,
-  type InternalKind,
-} from "../analyzer/kinds.js";
-import type {
-  AppliedRule,
-  LintedTarget,
-  RuleContext,
-} from "../types.js";
+import { AST_KINDS_BY_INTERNAL, type InternalKind } from "../analyzer/kinds.js";
+import type { AppliedRule, LintedTarget, RuleContext } from "../types.js";
 
 import type { RuleInput } from "../config/schemas.js";
 
@@ -35,7 +28,8 @@ import type { RuleInput } from "../config/schemas.js";
  * - PascalCase AST kinds map to the corresponding internal kind (e.g.
  *   `"FunctionDeclaration"` → `"function"`).
  */
-const KIND_EQUIV: Readonly<Record<string, readonly string[]>> = buildKindEquiv();
+const KIND_EQUIV: Readonly<Record<string, readonly string[]>> =
+  buildKindEquiv();
 
 function buildKindEquiv(): Readonly<Record<string, readonly string[]>> {
   const out: Record<string, string[]> = {};
@@ -74,7 +68,9 @@ interface IgnoreInstance {
   add(patterns: string | readonly string[]): IgnoreInstance;
   ignores(pathname: string): boolean;
 }
-const makeIgnore: IgnoreFactory = (ignore as unknown as IgnoreFactory).bind(ignore) as IgnoreFactory;
+const makeIgnore: IgnoreFactory = (ignore as unknown as IgnoreFactory).bind(
+  ignore,
+) as IgnoreFactory;
 
 function toTestablePath(absolutePath: string): string {
   return path.isAbsolute(absolutePath)
@@ -162,13 +158,7 @@ export async function match(
       if (!(await config.filter.matches(target.file, config.root))) continue;
 
       // 3. Rule-level file filter (where.files / where.exclude).
-      if (
-        !ruleFileMatches(
-          target.file,
-          rule.where.files,
-          rule.where.exclude,
-        )
-      ) {
+      if (!ruleFileMatches(target.file, rule.where.files, rule.where.exclude)) {
         continue;
       }
 

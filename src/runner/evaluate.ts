@@ -14,10 +14,7 @@ import type {
   RuleSettingInput,
 } from "../config/schemas.js";
 import type { JevClient } from "../jev/index.js";
-import type {
-  ChoiceAnswer,
-  Response as JevResponse,
-} from "../jev/types.js";
+import type { ChoiceAnswer, Response as JevResponse } from "../jev/types.js";
 import type { OverrideSetting, Rule } from "../policy/types.js";
 import { evaluateRule } from "../policy/index.js";
 import type { JevAnswer, Diagnostic, LintedTarget } from "../types.js";
@@ -168,8 +165,7 @@ async function runOneBatch(
   try {
     response = await options.client.evaluate(batch.request);
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : String(error);
+    const detail = error instanceof Error ? error.message : String(error);
     throw new Error(
       `evaluating ${rule.id} for ${batchTargets.length} target(s) (e.g. ${batchTargets[0]?.file ?? "<unknown>"}): ${detail}`,
     );
@@ -180,9 +176,7 @@ async function runOneBatch(
   if (answer === undefined) {
     // JevClient already validated the response shape; this path is for
     // belt-and-braces defense in depth.
-    throw new Error(
-      `Jev response missing answer for question id "${rule.id}"`,
-    );
+    throw new Error(`Jev response missing answer for question id "${rule.id}"`);
   }
 
   const diagnostics: Diagnostic[] = [];

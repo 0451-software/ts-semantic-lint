@@ -61,7 +61,11 @@ export function retryAfter(
   // V8's `Date.parse` will happily turn things like "-1" or "+1" into
   // real timestamps (year -1 / +1 epoch), so enforce the exact shape
   // before delegating.
-  if (!/^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(trimmed)) {
+  if (
+    !/^[A-Za-z]{3}, \d{2} [A-Za-z]{3} \d{4} \d{2}:\d{2}:\d{2} GMT$/.test(
+      trimmed,
+    )
+  ) {
     return undefined;
   }
   const parsed = Date.parse(trimmed);

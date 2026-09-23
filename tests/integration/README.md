@@ -80,7 +80,7 @@ For each fixture (`function-simplicity`, `comment-value`,
    - `choice` matches the expected rubric choice
    - `confidence >= 0.5` (the principled floor — see `typesafe-ai` skill)
 2. **Control diagnostic** — the test logs a warning when the model
-   *also* flags the clean control (this is model variance, not a bug),
+   _also_ flags the clean control (this is model variance, not a bug),
    but does not fail.
 3. **End-to-end timing** — full run completes in under 30s (warn-only).
 
@@ -108,6 +108,7 @@ guessing". Higher thresholds (0.7, 0.9) make rules stricter but more
 brittle on hard cases.
 
 See:
+
 - `~/.hermes/skills/research/typesafe-ai/SKILL.md`
 - `~/.hermes/skills/research/typesafe-ai/references/confidence.md`
 - `~/.hermes/skills/research/typesafe-ai/references/primitives.md`

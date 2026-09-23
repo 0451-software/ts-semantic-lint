@@ -26,43 +26,43 @@ import {
 
 ## Public API
 
-| Symbol | Purpose |
-|---|---|
-| `CONFIG_NAME` | `"ts-semantic-lint.json"` |
-| `load(path)` | Load + validate a config file from disk. |
-| `discover(start)` | Walk up from `start` to the nearest config; stops at `.git`. |
-| `loadFromDiscovery(start)` | `discover` + `load`. |
-| `Config` | Compiled, immutable configuration. |
-| `Config#settingFor(file, ruleId)` | Returns the last matching override's setting, or `undefined`. |
-| `FileFilter` | Glob matcher (include / exclude / always-excluded dirs). |
-| `mergeFromPath(path)` | Recursive `extends` + `rule_files` resolver (cycle + depth-checked). |
-| `generateConfigSchema()` | JSON-Schema 2020-12 for the full config. |
-| `generateRuleSchema()` | JSON-Schema 2020-12 for a single rule. |
-| `ConfigError` | All config failures throw this; check `error.path` for the offending file. |
+| Symbol                            | Purpose                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| `CONFIG_NAME`                     | `"ts-semantic-lint.json"`                                                  |
+| `load(path)`                      | Load + validate a config file from disk.                                   |
+| `discover(start)`                 | Walk up from `start` to the nearest config; stops at `.git`.               |
+| `loadFromDiscovery(start)`        | `discover` + `load`.                                                       |
+| `Config`                          | Compiled, immutable configuration.                                         |
+| `Config#settingFor(file, ruleId)` | Returns the last matching override's setting, or `undefined`.              |
+| `FileFilter`                      | Glob matcher (include / exclude / always-excluded dirs).                   |
+| `mergeFromPath(path)`             | Recursive `extends` + `rule_files` resolver (cycle + depth-checked).       |
+| `generateConfigSchema()`          | JSON-Schema 2020-12 for the full config.                                   |
+| `generateRuleSchema()`            | JSON-Schema 2020-12 for a single rule.                                     |
+| `ConfigError`                     | All config failures throw this; check `error.path` for the offending file. |
 
 ## Files in this module
 
-| File | Role |
-|---|---|
-| `index.ts` | `Config` class + `load`, `discover`, `loadFromDiscovery`, `compile`. |
-| `schemas.ts` | Zod schemas: `ConfigFile`, `Rule`, `Selector`, `Override`, `Question`, `Condition`, `DiagnosticPolicy`. |
-| `filter.ts` | `FileFilter` (tinyglobby) + `ConfigError`. |
-| `discovery.ts` | Ancestor walk + `.git` stop. |
-| `merge.ts` | `extends` + `rule_files` resolution with cycle detection (max 64 depth). |
-| `validation.ts` | Cross-field rules not expressible in Zod (override→rule references, choice→criteria references, has_body-only-for-function). |
-| `json-schema.ts` | JSON-Schema generation via `zod-to-json-schema`. |
-| `config.test.ts` | Vitest suite (15+ tests). |
-| `__fixtures__/` | Valid and invalid sample configs. |
+| File             | Role                                                                                                                         |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`       | `Config` class + `load`, `discover`, `loadFromDiscovery`, `compile`.                                                         |
+| `schemas.ts`     | Zod schemas: `ConfigFile`, `Rule`, `Selector`, `Override`, `Question`, `Condition`, `DiagnosticPolicy`.                      |
+| `filter.ts`      | `FileFilter` (tinyglobby) + `ConfigError`.                                                                                   |
+| `discovery.ts`   | Ancestor walk + `.git` stop.                                                                                                 |
+| `merge.ts`       | `extends` + `rule_files` resolution with cycle detection (max 64 depth).                                                     |
+| `validation.ts`  | Cross-field rules not expressible in Zod (override→rule references, choice→criteria references, has_body-only-for-function). |
+| `json-schema.ts` | JSON-Schema generation via `zod-to-json-schema`.                                                                             |
+| `config.test.ts` | Vitest suite (15+ tests).                                                                                                    |
+| `__fixtures__/`  | Valid and invalid sample configs.                                                                                            |
 
 ## Defaults
 
-| Field | Default |
-|---|---|
-| `version` | `1` |
-| `model` | `"jev-latest"` |
+| Field     | Default                   |
+| --------- | ------------------------- |
+| `version` | `1`                       |
+| `model`   | `"jev-latest"`            |
 | `include` | `["**/*.ts", "**/*.tsx"]` |
-| `exclude` | `[]` |
-| `rules` | required (≥1) |
+| `exclude` | `[]`                      |
+| `rules`   | required (≥1)             |
 
 Always-excluded directories (cannot be opted into): `node_modules`,
 `dist`, `.git`, `coverage`.

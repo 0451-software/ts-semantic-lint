@@ -18,7 +18,11 @@
  * examples.
  */
 
-import { parse, simpleTraverse, TSError } from "@typescript-eslint/typescript-estree";
+import {
+  parse,
+  simpleTraverse,
+  TSError,
+} from "@typescript-eslint/typescript-estree";
 import type { TSESTree } from "@typescript-eslint/typescript-estree";
 
 import type { EnclosingScope, LintedTarget } from "../types.js";
@@ -75,7 +79,12 @@ const DEFAULT_KINDS: ReadonlySet<InternalKind> = new Set<InternalKind>([
 ]);
 
 const KIND_TO_AST: Readonly<Record<InternalKind, readonly string[]>> = {
-  function: ["FunctionDeclaration", "TSDeclareFunction", "ArrowFunctionExpression", "MethodDefinition"],
+  function: [
+    "FunctionDeclaration",
+    "TSDeclareFunction",
+    "ArrowFunctionExpression",
+    "MethodDefinition",
+  ],
   class: ["ClassDeclaration", "ClassExpression"],
   interface: ["TSInterfaceDeclaration"],
   type: ["TSTypeAliasDeclaration"],
@@ -150,12 +159,14 @@ export function extractTargets(
  * and column numbers, for inclusion in the `SyntaxError` thrown to callers.
  */
 function formatParseError(error: TSError): string {
-  const location = (error as { location?: { start?: { line?: number; column?: number } } })
-    .location;
+  const location = (
+    error as { location?: { start?: { line?: number; column?: number } } }
+  ).location;
   const start = location?.start;
-  const where = start?.line !== undefined && start.column !== undefined
-    ? `at line ${start.line}, column ${start.column}`
-    : "";
+  const where =
+    start?.line !== undefined && start.column !== undefined
+      ? `at line ${start.line}, column ${start.column}`
+      : "";
   return `TypeScript syntax error${where ? ` ${where}` : ""}: ${error.message}`;
 }
 
@@ -342,15 +353,23 @@ function readHasBody(node: TSESTree.Node): boolean {
  * like `export`, `export default`, `declare`, etc. so the emitted `snippet`
  * and `range` cover the full declaration a user sees in source.
  */
-function expandRangeToModifiers(node: TSESTree.Node): readonly [number, number] {
+function expandRangeToModifiers(
+  node: TSESTree.Node,
+): readonly [number, number] {
   let start = node.range[0];
   let end = node.range[1];
   const parent = node.parent;
   if (parent) {
-    if (parent.type === "ExportNamedDeclaration" && parent.declaration === node) {
+    if (
+      parent.type === "ExportNamedDeclaration" &&
+      parent.declaration === node
+    ) {
       start = Math.min(start, parent.range[0]);
       end = Math.max(end, parent.range[1]);
-    } else if (parent.type === "ExportDefaultDeclaration" && parent.declaration === node) {
+    } else if (
+      parent.type === "ExportDefaultDeclaration" &&
+      parent.declaration === node
+    ) {
       start = Math.min(start, parent.range[0]);
       end = Math.max(end, parent.range[1]);
     }
@@ -361,9 +380,14 @@ function expandRangeToModifiers(node: TSESTree.Node): readonly [number, number] 
 /**
  * Read the `accessibility` modifier from a node, falling back to `"public"`.
  */
-function readVisibility(node: TSESTree.Node): "public" | "private" | "protected" {
+function readVisibility(
+  node: TSESTree.Node,
+): "public" | "private" | "protected" {
   const candidate = node as { accessibility?: unknown };
-  if (candidate.accessibility === "private" || candidate.accessibility === "protected") {
+  if (
+    candidate.accessibility === "private" ||
+    candidate.accessibility === "protected"
+  ) {
     return candidate.accessibility;
   }
   return "public";
@@ -372,8 +396,13 @@ function readVisibility(node: TSESTree.Node): "public" | "private" | "protected"
 /**
  * Read `@Decorator` source spans from a node, if any. Empty array when none.
  */
-function readAttributes(node: TSESTree.Node, source: string): readonly string[] {
-  const candidate = node as { decorators?: ReadonlyArray<{ expression: TSESTree.Node }> };
+function readAttributes(
+  node: TSESTree.Node,
+  source: string,
+): readonly string[] {
+  const candidate = node as {
+    decorators?: ReadonlyArray<{ expression: TSESTree.Node }>;
+  };
   const decorators = candidate.decorators;
   if (!decorators || decorators.length === 0) {
     return [];
@@ -457,19 +486,35 @@ function toEnclosingScope(
   for (const entry of entries) {
     switch (entry.kind) {
       case "module":
-        out.push(entry.name ? { kind: "module", name: entry.name } : { kind: "module" });
+        out.push(
+          entry.name
+            ? { kind: "module", name: entry.name }
+            : { kind: "module" },
+        );
         break;
       case "class":
-        out.push(entry.name ? { kind: "class", name: entry.name } : { kind: "class" });
+        out.push(
+          entry.name ? { kind: "class", name: entry.name } : { kind: "class" },
+        );
         break;
       case "function":
-        out.push(entry.name ? { kind: "function", name: entry.name } : { kind: "function" });
+        out.push(
+          entry.name
+            ? { kind: "function", name: entry.name }
+            : { kind: "function" },
+        );
         break;
       case "interface":
-        out.push(entry.name ? { kind: "interface", name: entry.name } : { kind: "interface" });
+        out.push(
+          entry.name
+            ? { kind: "interface", name: entry.name }
+            : { kind: "interface" },
+        );
         break;
       case "type":
-        out.push(entry.name ? { kind: "type", name: entry.name } : { kind: "type" });
+        out.push(
+          entry.name ? { kind: "type", name: entry.name } : { kind: "type" },
+        );
         break;
     }
   }
@@ -500,11 +545,7 @@ interface MutableTarget {
 
 // Re-exports so consumers can import the analyzer's pieces from a single
 // entry point.
-export {
-  EXTRACTABLE_NODE_KINDS,
-  internalKindFor,
-  UNNAMED,
-} from "./kinds.js";
+export { EXTRACTABLE_NODE_KINDS, internalKindFor, UNNAMED } from "./kinds.js";
 
 export { nameFor, describe, declarationStartFor } from "./describe.js";
 export { enclosingFor } from "./enclosing.js";

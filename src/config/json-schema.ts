@@ -14,10 +14,7 @@
  */
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-import {
-  ConfigFileSchema,
-  RuleSchema,
-} from "./schemas.js";
+import { ConfigFileSchema, RuleSchema } from "./schemas.js";
 
 /** Target JSON Schema version — 2020-12. */
 const DRAFT = "https://json-schema.org/draft/2020-12/schema" as const;

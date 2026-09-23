@@ -46,16 +46,19 @@ function sliceRange(source: string, range: readonly [number, number]): string {
 function hasDecorators(node: TSESTree.Node): node is TSESTree.Node & {
   decorators: ReadonlyArray<TSESTree.Decorator>;
 } {
-  return "decorators" in node && Array.isArray((node as { decorators?: unknown }).decorators);
+  return (
+    "decorators" in node &&
+    Array.isArray((node as { decorators?: unknown }).decorators)
+  );
 }
 
 /**
  * Type guard: a node carries `leadingComments` (set when typescript-estree
  * parses with `comment: true`, which our default does).
  */
-function hasLeadingComments(
-  node: TSESTree.Node,
-): node is TSESTree.Node & { leadingComments: ReadonlyArray<TSESTree.Comment> } {
+function hasLeadingComments(node: TSESTree.Node): node is TSESTree.Node & {
+  leadingComments: ReadonlyArray<TSESTree.Comment>;
+} {
   return (
     "leadingComments" in node &&
     Array.isArray((node as { leadingComments?: unknown }).leadingComments)
@@ -66,15 +69,16 @@ function hasLeadingComments(
  * Type guard: `TSTypeParameterDeclaration` attached to a function / class /
  * type / interface.
  */
-function hasTypeParameters(
-  node: TSESTree.Node,
-): node is TSESTree.Node & { typeParameters: TSESTree.TSTypeParameterDeclaration } {
+function hasTypeParameters(node: TSESTree.Node): node is TSESTree.Node & {
+  typeParameters: TSESTree.TSTypeParameterDeclaration;
+} {
   const candidate = node as { typeParameters?: unknown };
   return (
     candidate.typeParameters !== undefined &&
     candidate.typeParameters !== null &&
     typeof candidate.typeParameters === "object" &&
-    (candidate.typeParameters as { type?: string }).type === "TSTypeParameterDeclaration"
+    (candidate.typeParameters as { type?: string }).type ===
+      "TSTypeParameterDeclaration"
   );
 }
 
@@ -118,7 +122,11 @@ export function nameFor(node: TSESTree.Node): string | undefined {
       // The function itself rarely has a name; walk to the variable declarator
       // parent when possible.
       const parent = node.parent;
-      if (parent && parent.type === "VariableDeclarator" && parent.id.type === "Identifier") {
+      if (
+        parent &&
+        parent.type === "VariableDeclarator" &&
+        parent.id.type === "Identifier"
+      ) {
         return parent.id.name;
       }
       return undefined;
@@ -159,7 +167,9 @@ function collectAttributes(node: TSESTree.Node, source: string): string[] {
   const out: string[] = [];
   for (const decorator of decorators) {
     const expression = decorator.expression;
-    out.push(sliceSource(source, expression.range[0], expression.range[1]) ?? "");
+    out.push(
+      sliceSource(source, expression.range[0], expression.range[1]) ?? "",
+    );
   }
   return out;
 }
@@ -193,9 +203,14 @@ function collectDocs(node: TSESTree.Node, source: string): string[] {
  * Determine the visibility modifier for a node. Defaults to `"public"` to
  * match Rust's default.
  */
-function visibilityFor(node: TSESTree.Node): "public" | "private" | "protected" {
+function visibilityFor(
+  node: TSESTree.Node,
+): "public" | "private" | "protected" {
   const candidate = node as { accessibility?: unknown };
-  if (candidate.accessibility === "private" || candidate.accessibility === "protected") {
+  if (
+    candidate.accessibility === "private" ||
+    candidate.accessibility === "protected"
+  ) {
     return candidate.accessibility;
   }
   return "public";
@@ -204,10 +219,7 @@ function visibilityFor(node: TSESTree.Node): "public" | "private" | "protected" 
 /**
  * Extract the text of a `TSTypeParameterDeclaration` if present on the node.
  */
-function genericsText(
-  node: TSESTree.Node,
-  source: string,
-): string | undefined {
+function genericsText(node: TSESTree.Node, source: string): string | undefined {
   if (!hasTypeParameters(node)) {
     return undefined;
   }
@@ -217,7 +229,10 @@ function genericsText(
 /**
  * Common `state` fields — present on every kind of target.
  */
-function commonState(node: TSESTree.Node, source: string): Record<string, unknown> {
+function commonState(
+  node: TSESTree.Node,
+  source: string,
+): Record<string, unknown> {
   return {
     name: nameFor(node) ?? null,
     generics: genericsText(node, source) ?? null,
@@ -232,7 +247,13 @@ function commonState(node: TSESTree.Node, source: string): Record<string, unknow
  */
 function modifierFlags(node: TSESTree.Node): Record<string, boolean> {
   const out: Record<string, boolean> = {};
-  const flags = ["static", "readonly", "abstract", "override", "declare"] as const;
+  const flags = [
+    "static",
+    "readonly",
+    "abstract",
+    "override",
+    "declare",
+  ] as const;
   const bag = node as unknown as Record<string, unknown>;
   for (const flag of flags) {
     if (bag[flag] === true) {
@@ -263,8 +284,9 @@ function formatParams(
 ): Array<Record<string, unknown>> {
   const out: Array<Record<string, unknown>> = [];
   for (const param of params) {
-    const outerAnnotation = (param as { typeAnnotation?: TSESTree.TSTypeAnnotation | null })
-      .typeAnnotation;
+    const outerAnnotation = (
+      param as { typeAnnotation?: TSESTree.TSTypeAnnotation | null }
+    ).typeAnnotation;
     const innerType = outerAnnotation?.typeAnnotation;
     out.push({
       pattern: sliceRange(source, param.range),
@@ -284,7 +306,10 @@ function formatParams(
  * The returned object is a plain JSON-serializable record; nested values
  * must be JSON-safe (strings, numbers, booleans, arrays, objects, null).
  */
-export function describe(node: TSESTree.Node, source: string): Record<string, unknown> {
+export function describe(
+  node: TSESTree.Node,
+  source: string,
+): Record<string, unknown> {
   const base = commonState(node, source);
   const mods = modifierFlags(node);
 
@@ -295,7 +320,9 @@ export function describe(node: TSESTree.Node, source: string): Record<string, un
       // can tell this is an ambient declaration.
       const decl = node;
       const params = decl.params ? formatParams(decl.params, source) : [];
-      const returnType = decl.returnType ? sliceRange(source, decl.returnType.range) : null;
+      const returnType = decl.returnType
+        ? sliceRange(source, decl.returnType.range)
+        : null;
       return {
         ...base,
         params,
@@ -312,7 +339,9 @@ export function describe(node: TSESTree.Node, source: string): Record<string, un
       const params = formatParams(fn.params, source);
       const outerReturn = hasReturnType(fn) ? fn.returnType : null;
       const innerReturn = outerReturn?.typeAnnotation ?? null;
-      const returnType = innerReturn ? sliceRange(source, innerReturn.range) : null;
+      const returnType = innerReturn
+        ? sliceRange(source, innerReturn.range)
+        : null;
       const bodyRange = "body" in fn && fn.body ? fn.body.range : null;
       const body = bodyRange ? sliceRange(source, bodyRange) : null;
       const signature = bodyRange
@@ -365,7 +394,8 @@ export function describe(node: TSESTree.Node, source: string): Record<string, un
       for (const member of cls.body.body) {
         if (member.type === "PropertyDefinition") {
           const outerTypeAnnotation = member.typeAnnotation;
-          const innerTypeAnnotation = outerTypeAnnotation?.typeAnnotation ?? null;
+          const innerTypeAnnotation =
+            outerTypeAnnotation?.typeAnnotation ?? null;
           fields.push({
             name:
               member.key.type === "Identifier"
@@ -373,7 +403,9 @@ export function describe(node: TSESTree.Node, source: string): Record<string, un
                 : member.key.type === "Literal"
                   ? String(member.key.value)
                   : sliceRange(source, member.key.range),
-            type: innerTypeAnnotation ? sliceRange(source, innerTypeAnnotation.range) : null,
+            type: innerTypeAnnotation
+              ? sliceRange(source, innerTypeAnnotation.range)
+              : null,
             static: member.static,
             readonly: member.readonly,
             visibility: (member.accessibility ?? "public") as string,
@@ -456,7 +488,10 @@ export function describe(node: TSESTree.Node, source: string): Record<string, un
     case "TSModuleDeclaration": {
       const mod = node;
       const body = mod.body;
-      const contents = body && body.type === "TSModuleBlock" ? sliceRange(source, body.range) : null;
+      const contents =
+        body && body.type === "TSModuleBlock"
+          ? sliceRange(source, body.range)
+          : null;
       return {
         ...base,
         external: body === null,
@@ -497,8 +532,10 @@ export function displayName(node: TSESTree.Node): string {
  * For most kinds this is the start of the node itself; for
  * `ArrowFunctionExpression` we keep the start of the arrow.
  */
-export function declarationStartFor(
-  node: TSESTree.Node,
-): { readonly offset: number; readonly line: number; readonly column: number } {
+export function declarationStartFor(node: TSESTree.Node): {
+  readonly offset: number;
+  readonly line: number;
+  readonly column: number;
+} {
   return { offset: node.range[0], line: -1, column: -1 };
 }

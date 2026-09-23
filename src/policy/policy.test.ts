@@ -82,13 +82,13 @@ describe("matchesSelector", () => {
 
   it("matches by namePattern regex", () => {
     expect(
-      matchesSelector(
-        { namePattern: "^my.*" },
-        makeTarget({ name: "myFunc" }),
-      ),
+      matchesSelector({ namePattern: "^my.*" }, makeTarget({ name: "myFunc" })),
     ).toBe(true);
     expect(
-      matchesSelector({ namePattern: "^other" }, makeTarget({ name: "myFunc" })),
+      matchesSelector(
+        { namePattern: "^other" },
+        makeTarget({ name: "myFunc" }),
+      ),
     ).toBe(false);
   });
 
@@ -176,10 +176,7 @@ describe("matchesSelector", () => {
 
   it("hasBody uses target.hasBody ?? false", () => {
     expect(
-      matchesSelector(
-        { hasBody: false },
-        targetWithBody({ hasBody: false }),
-      ),
+      matchesSelector({ hasBody: false }, targetWithBody({ hasBody: false })),
     ).toBe(true);
     expect(
       matchesSelector({ hasBody: true }, targetWithBody({ hasBody: false })),
@@ -194,7 +191,9 @@ describe("Condition.matches", () => {
     expect(matches({ choice: "yes" }, makeAnswer({ choice: "yes" }))).toBe(
       true,
     );
-    expect(matches({ choice: "no" }, makeAnswer({ choice: "yes" }))).toBe(false);
+    expect(matches({ choice: "no" }, makeAnswer({ choice: "yes" }))).toBe(
+      false,
+    );
   });
 
   it("matches on min_confidence lower bound", () => {
@@ -284,10 +283,7 @@ describe("Condition.matches", () => {
 
   it("all: every nested condition must match", () => {
     const cond: Condition = {
-      all: [
-        { choice: "yes" },
-        { min_confidence: 0.5 },
-      ],
+      all: [{ choice: "yes" }, { min_confidence: 0.5 }],
     };
     expect(matches(cond, makeAnswer({ choice: "yes", confidence: 0.9 }))).toBe(
       true,
@@ -313,15 +309,15 @@ describe("Condition.matches", () => {
         { choice: "no" },
       ],
     };
-    expect(
-      matches(cond, makeAnswer({ choice: "yes", confidence: 0.9 })),
-    ).toBe(true);
-    expect(
-      matches(cond, makeAnswer({ choice: "no", confidence: 0.1 })),
-    ).toBe(true);
-    expect(
-      matches(cond, makeAnswer({ choice: "yes", confidence: 0.1 })),
-    ).toBe(false);
+    expect(matches(cond, makeAnswer({ choice: "yes", confidence: 0.9 }))).toBe(
+      true,
+    );
+    expect(matches(cond, makeAnswer({ choice: "no", confidence: 0.1 }))).toBe(
+      true,
+    );
+    expect(matches(cond, makeAnswer({ choice: "yes", confidence: 0.1 }))).toBe(
+      false,
+    );
   });
 });
 
@@ -391,7 +387,9 @@ describe("evaluateRule", () => {
         },
       ],
     });
-    expect(evaluateRule(rule, makeTarget(), makeAnswer(), undefined)).toBeNull();
+    expect(
+      evaluateRule(rule, makeTarget(), makeAnswer(), undefined),
+    ).toBeNull();
   });
 
   it("first matching policy wins (later policies skipped)", () => {
@@ -456,7 +454,12 @@ describe("evaluateRule", () => {
       ],
     });
     const answer = makeAnswer({ choice: "yes", confidence: 0.88 });
-    const diag = evaluateRule(rule, makeTarget({ name: "world" }), answer, undefined);
+    const diag = evaluateRule(
+      rule,
+      makeTarget({ name: "world" }),
+      answer,
+      undefined,
+    );
     expect(diag).not.toBeNull();
     expect(diag?.ruleId).toBe("my-rule");
     expect(diag?.file).toBe("/src/example.ts");

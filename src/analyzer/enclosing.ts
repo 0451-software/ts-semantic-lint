@@ -54,7 +54,10 @@ function collectAncestors(node: TSESTree.Node): readonly TSESTree.Node[] {
  * returns only Module / Function / Trait / Impl ancestors, never the file
  * scope itself.
  */
-function describeEnclosing(node: TSESTree.Node, source: string): EnclosingEntry | undefined {
+function describeEnclosing(
+  node: TSESTree.Node,
+  source: string,
+): EnclosingEntry | undefined {
   const internal: InternalKind | undefined = internalKindFor(node.type);
   if (!internal) {
     return undefined;
@@ -91,7 +94,11 @@ function describeEnclosing(node: TSESTree.Node, source: string): EnclosingEntry 
   }
   const name = nameFor(node);
   const safeName = name && name !== UNNAMED ? name : undefined;
-  const entry: { kind: EnclosingEntry["kind"]; name?: string; source?: string } = {
+  const entry: {
+    kind: EnclosingEntry["kind"];
+    name?: string;
+    source?: string;
+  } = {
     kind,
     ...(safeName !== undefined ? { name: safeName } : {}),
   };
@@ -99,7 +106,8 @@ function describeEnclosing(node: TSESTree.Node, source: string): EnclosingEntry 
     // Include a tiny snippet of the declaration (signature only) so Jev can
     // disambiguate overloaded / duplicate-named scopes without re-parsing
     // the whole source.
-    const bodyRange = (node as { body?: { range?: readonly [number, number] } }).body?.range;
+    const bodyRange = (node as { body?: { range?: readonly [number, number] } })
+      .body?.range;
     const sigEnd = Array.isArray(bodyRange) ? bodyRange[0] : node.range[1];
     entry.source = source.slice(node.range[0], sigEnd);
   }
@@ -114,7 +122,10 @@ function describeEnclosing(node: TSESTree.Node, source: string): EnclosingEntry 
  * / interface / type ancestors, but excludes the file-level `Program` (the
  * Rust original returns Module / Function / Trait / Impl only).
  */
-export function enclosingFor(node: TSESTree.Node, source: string): readonly EnclosingEntry[] {
+export function enclosingFor(
+  node: TSESTree.Node,
+  source: string,
+): readonly EnclosingEntry[] {
   const ancestors = collectAncestors(node);
   const innerFirst: EnclosingEntry[] = [];
   for (const ancestor of ancestors) {
