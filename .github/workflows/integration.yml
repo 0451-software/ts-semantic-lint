@@ -1,4 +1,4 @@
-# Diagnostic: just the reusable call, no `secrets:` block.
+# Diagnostic: bare reusable call with NO inputs.
 
 name: integration
 
@@ -19,8 +19,3 @@ jobs:
   quality:
     name: Quality gates
     uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
-    with:
-      working_directory: '.'
-      node_version: '20'
-      lint_enabled: false
-      integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
