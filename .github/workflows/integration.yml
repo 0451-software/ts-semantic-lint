@@ -1,5 +1,10 @@
 # Weekly + on-demand live integration test workflow.
-# Canonical caller form for 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1.
+# Calls the vendored copy of 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
+# (see `_reusable-node-quality-gates.yml` for the upstream SHA at vendoring time and resync notes).
+# The upstream reusable is private; this caller is public, so we cannot reach the upstream
+# directly (GitHub returns "workflow was not found" and schedules 0 jobs). The vendored copy
+# at ./.github/workflows/_reusable-node-quality-gates.yml is byte-identical to upstream at the
+# recorded SHA; re-vendor when upstream changes.
 # Mirrors the pre-PR-#14 intent (b7519cd): TYPESAFE_API_KEY reaches the integration-tests gate
 # via `secrets: inherit`; lint is disabled because the ESLint v9 flat config (`eslint.config.mjs`)
 # is documented in CONTRIBUTING.md but not yet committed — tracked as a separate follow-up.
@@ -23,7 +28,7 @@ permissions:
 jobs:
   quality:
     name: Quality gates
-    uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
+    uses: ./.github/workflows/_reusable-node-quality-gates.yml
     with:
       # ESLint v9 flat config is not yet committed (CONTRIBUTING.md documents `eslint.config.mjs`
       # as "added by the cli worktree in pass 2" — not yet on main). Skip lint until that lands

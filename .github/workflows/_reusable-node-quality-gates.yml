@@ -1,0 +1,1188 @@
+# VENDORED COPY of 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@v1
+# Source SHA at vendoring time: 3ae595435ed80af1bc44bf654189fc66d4e50b28
+#
+# This file is a vendored snapshot of the upstream reusable workflow. It was copied into
+# the caller repo because 0451-software/reusable-workflows is PRIVATE, and this caller
+# repo (ts-semantic-lint) is PUBLIC. GitHub Actions does not let a public caller resolve
+# a reusable workflow hosted in a private repo; the run schedules 0 jobs and fails with
+# "workflow was not found". Vendoring into the public repo own .github/workflows/ tree
+# and calling it via uses: ./.github/workflows/_reusable-node-quality-gates.yml resolves
+# this cleanly.
+#
+# When reusable-workflows upstream changes, re-vendor by copying the new version and
+# bumping the source SHA note above.
+# Node.js / TypeScript quality gates (reusable).
+#
+# ONE pipeline, EIGHT gates, over a pnpm-locked Node.js or TypeScript project.
+# The sibling of python-quality-gates.yml; the shape is deliberately identical
+# so a reviewer who knows one knows the other.
+#
+#   TIER 0 — no `dist/` dependency, run in parallel:
+#     lint               pnpm run lint               (source only)
+#     format             pnpm run format:check       (source only)
+#     audit              pnpm audit                  (lockfile only)
+#     freshness          pnpm outdated --format json (manifest only)
+#     build              pnpm run build              — produces dist/ for tier 1
+#
+#   TIER 1 — depends on build, run in parallel with each other:
+#     typecheck          pnpm run typecheck          (may resolve cross-package
+#                                                    types from <pkg>/dist/index.d.ts)
+#     unit-tests         pnpm run test               (may exec compiled CLI from dist/)
+#
+#   TIER 2 — depends on every tier-0 and tier-1 gate:
+#     integration-tests  pnpm run test:integration
+#
+# This is a deliberate reordering from the v1.0.0 fast-then-expensive split.
+# In v1.0.0 build ran AFTER every fast gate; for monorepo callers that
+# ordering is a catch-22 because typecheck and unit-tests need `dist/` from
+# build but build was gated on those gates succeeding. The reorder puts
+# build where monorepos need it (parallel with lint/format/audit/freshness,
+# before typecheck/unit-tests) and preserves the rest of the fast-lane
+# parallelism for single-package callers. None of the gate CONTENT has
+# changed; only the `needs:` graph between jobs. See CHANGELOG.md v1.1.0.
+#
+# ---------------------------------------------------------------------------
+# WHY THE GATES THAT FAN-IN (TIER 1 / TIER 2) CARRY AN `always()` GUARD
+# ---------------------------------------------------------------------------
+# A gate that is disabled has its job `if:` evaluate false, so the job lands
+# in `skipped`. GitHub treats a skipped upstream in `needs:` as UNSATISFIED and
+# auto-skips the downstream job — and a skipped job is a SUCCESSFUL outcome, so
+# the run shows green while the gate never ran at all. With eight
+# independently-disableable gates, that failure mode would be the norm.
+#
+# The guard is therefore explicit:
+#
+#   always() && !cancelled()           -> do not inherit upstream skips
+#   !contains(needs.*.result, 'failure') -> but still fail fast, never run
+#                                           downstream work after a cheap failure
+#
+# `needs` lists EVERY upstream job (not just the immediately preceding one) so
+# the failure check covers the whole pipeline rather than one hop.
+#
+# Tier 0 (lint, format, audit, freshness, build) carries no guard because it
+# has no upstream needs: a skipped fast gate lands in `skipped` rather than
+# `failure`, and `!contains(needs.*.result, 'failure')` is vacuously true for
+# a job with no upstream. Tier 0 still respects `*_enabled` via its `if:`.
+#
+# ---------------------------------------------------------------------------
+# WHY EVERY GATE IS A SEPARATE JOB
+# ---------------------------------------------------------------------------
+# Separate jobs are the only way to get parallelism and per-gate status in the
+# GitHub UI. The cost is one checkout + toolchain install per gate; the benefit
+# is a failing lint does not wait behind a slow test run.
+#
+# ---------------------------------------------------------------------------
+# PNPM ONLY
+# ---------------------------------------------------------------------------
+# The org has standardised on pnpm, so this workflow does not auto-detect a
+# package manager and does not support npm or yarn. A committed
+# pnpm-lock.yaml is required: setup-node caches on it, and install runs under
+# --frozen-lockfile by default so a lockfile that has drifted from
+# package.json fails the run instead of silently building an unlocked tree.
+#
+# pnpm itself is set up by TWO conditional steps rather than one. Passing
+# `version:` to pnpm/action-setup while package.json also declares
+# `packageManager` makes the action fail with "Multiple versions of pnpm
+# specified", and a caller with no packageManager field still needs a version
+# passed. The two steps cover both cases and never both fire.
+#
+# The no-version step MUST pass `package_json_file`. Without it,
+# pnpm/action-setup reads `package.json` at the REPOSITORY ROOT rather than at
+# `working_directory`, and fails with "No pnpm version is specified" whenever
+# the root carries no manifest — which is normal for a monorepo whose package
+# lives under apps/, and true of every fixture in this repository. Measured on
+# 0451-software/reusable-workflows run 35348067623, where all eight jobs died
+# on that step. The selftest in this repo is what caught it.
+#
+# ---------------------------------------------------------------------------
+# WHY EVERY SCRIPT GATE PROBES package.json BEFORE RUNNING
+# ---------------------------------------------------------------------------
+# `pnpm run --if-present <script>` exits 0 when the script does not exist, and
+# says nothing. A gate wired to a script the project never declared would then
+# report a silent pass — the exact failure mode this workflow exists to
+# prevent. Each script gate therefore probes package.json first and, when the
+# script is missing (or the `*_script` input is empty), emits a `::notice::`
+# and a SKIPPED block in the job summary. A skipped gate stays visible.
+#
+# ---------------------------------------------------------------------------
+# USAGE (caller)
+# ---------------------------------------------------------------------------
+#
+#   jobs:
+#     quality:
+#       uses: 0451-software/reusable-workflows/.github/workflows/node-quality-gates.yml@main
+#       with:
+#         node_version: "24"
+#         working_directory: packages/web   # monorepo: point at the package
+#         integration_test_script: "test:e2e"
+#
+# Every gate can be disabled with its `*_enabled` flag, or re-pointed at a
+# different package.json script with its `*_script` input. See README.md for
+# the full input table.
+#
+# NOTE: this workflow deliberately declares no `workflow_dispatch` trigger. A
+# reusable workflow invoked by workflow_dispatch only receives the inputs
+# declared for that trigger, so every input used in a job would have to be
+# redeclared there or it would arrive empty. Validate changes via
+# node-quality-gates-selftest.yml instead.
+
+name: Node Quality Gates (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      # ---- environment ------------------------------------------------------
+      working_directory:
+        description: >-
+          Directory holding package.json and pnpm-lock.yaml, relative to the
+          repository root. Point this at a single package to run the gates
+          against part of a monorepo.
+        type: string
+        default: "."
+      node_version:
+        description: Node.js version to run the gates against.
+        type: string
+        default: "24"
+      pnpm_version:
+        description: >-
+          pnpm version installed by pnpm/action-setup. Leave empty to read the
+          version from the `packageManager` field in package.json, which is the
+          usual choice — that field is what Corepack uses, and it keeps the
+          version resolving in exactly one place. Set it only when package.json
+          declares no `packageManager`, or to override one that is wrong.
+        type: string
+        default: ""
+      frozen_lockfile:
+        description: >-
+          Run `pnpm install --frozen-lockfile`, failing when pnpm-lock.yaml has
+          drifted from package.json. Set false if the lockfile is regenerated
+          in the same run, or when packageManager and the lockfile are not yet
+          in sync — with `--frozen-lockfile` that mismatch fails with
+          ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE rather than being
+          repaired.
+        type: boolean
+        default: true
+
+      # ---- fast gates -------------------------------------------------------
+      lint_enabled:
+        description: Run the lint gate.
+        type: boolean
+        default: true
+      lint_script:
+        description: package.json script the lint gate runs. Ignored when lint_enabled is false.
+        type: string
+        default: "lint"
+      format_enabled:
+        description: Run the format gate (a check, never a rewrite).
+        type: boolean
+        default: true
+      format_script:
+        description: >-
+          package.json script the format gate runs. Point it at a check script
+          such as `format:check`; a script that rewrites files would make the
+          gate pass by mutating the repository.
+        type: string
+        default: "format:check"
+      typecheck_enabled:
+        description: Run the typecheck gate.
+        type: boolean
+        default: true
+      typecheck_script:
+        description: package.json script the typecheck gate runs.
+        type: string
+        default: "typecheck"
+      unit_tests_enabled:
+        description: Run the unit-test gate.
+        type: boolean
+        default: true
+      unit_test_script:
+        description: package.json script the unit-test gate runs.
+        type: string
+        default: "test"
+      audit_enabled:
+        description: Run the dependency audit gate (pnpm audit).
+        type: boolean
+        default: true
+      audit_level:
+        description: >-
+          Lowest severity that fails the audit gate: "info", "low", "moderate",
+          "high" or "critical". Defaults to "high" because anything lower makes
+          a lockfile go red for findings no reviewer would act on.
+        type: string
+        default: "high"
+      freshness_enabled:
+        description: Run the dependency freshness gate.
+        type: boolean
+        default: true
+      fail_on_outdated:
+        description: >-
+          Fail the freshness gate when a declared dependency has a newer
+          release. Set false to report the table as an advisory only.
+        type: boolean
+        default: true
+
+      # ---- expensive gates --------------------------------------------------
+      build_enabled:
+        description: Run the build gate.
+        type: boolean
+        default: true
+      build_script:
+        description: package.json script the build gate runs.
+        type: string
+        default: "build"
+      integration_tests_enabled:
+        description: Run the integration-test gate.
+        type: boolean
+        default: true
+      integration_test_script:
+        description: package.json script the integration-test gate runs.
+        type: string
+        default: "test:integration"
+
+      # ---- coverage ---------------------------------------------------------
+      # Coverage is opt-in: default false keeps the existing v0 caller base
+      # untouched. When true, both test gates upload whatever the project
+      # writes under `coverage_paths` (one or more glob patterns relative to
+      # `working_directory`, comma-separated) as a workflow artifact named
+      # after the gate. The reusable does not parse any threshold or report
+      # format — that choice is project-specific (see design doc §5, deferred
+      # to v1.1).
+      coverage_enabled:
+        description: Upload coverage output from the test gates as a workflow artifact.
+        type: boolean
+        default: false
+      coverage_paths:
+        description: |
+          Glob patterns, relative to `working_directory`, that select the
+          files to upload. Multiple patterns are comma-separated
+          (default `coverage/**`). Whitespace around commas is stripped.
+        type: string
+        default: "coverage/**"
+
+    outputs:
+      # Job results are exposed so a caller can gate its own jobs on a specific
+      # gate's outcome, and so the selftest can prove that an enabled expensive
+      # gate actually ran rather than being skipped by the needs: cascade.
+      # Values are `success`, `failure`, `cancelled` or `skipped`.
+      #
+      # `jobs.<job_id>.result` is documented for `on.workflow_call.outputs.*.value`
+      # (see the Contexts reference, "jobs context"), but actionlint's type model
+      # does not implement it and reports `property "result" is not defined in
+      # object type {outputs: {}}` for every line below. That is an actionlint
+      # limitation, not a workflow error — do not "fix" it by deleting these
+      # outputs. Suppress it with
+      # `actionlint -ignore 'property "result" is not defined in object type'`,
+      # matched against the MESSAGE text rather than the source line — a pattern
+      # like 'jobs\.[a-z-]+\.result' silently matches nothing, which reads as a
+      # passing lint until you check the exit code instead of a piped one.
+      lint_result:
+        description: Result of the lint gate.
+        value: ${{ jobs.lint.result }}
+      format_result:
+        description: Result of the format gate.
+        value: ${{ jobs.format.result }}
+      typecheck_result:
+        description: Result of the typecheck gate.
+        value: ${{ jobs.typecheck.result }}
+      unit_tests_result:
+        description: Result of the unit-test gate.
+        value: ${{ jobs.unit-tests.result }}
+      audit_result:
+        description: Result of the dependency audit gate.
+        value: ${{ jobs.audit.result }}
+      freshness_result:
+        description: Result of the dependency freshness gate.
+        value: ${{ jobs.freshness.result }}
+      build_result:
+        description: Result of the build gate.
+        value: ${{ jobs.build.result }}
+      integration_tests_result:
+        description: Result of the integration-test gate.
+        value: ${{ jobs.integration-tests.result }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ===========================================================================
+  # Tier 0: no `dist/` dependency, run in parallel. None of these jobs declare
+  # an upstream `needs:`. The build job moved here from tier 1 in v1.1.0 so
+  # that the typecheck and unit-tests gates downstream can resolve cross-
+  # package types and compiled CLIs from `dist/`.
+  # ===========================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    if: inputs.lint_enabled
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      # Two steps, exactly one of which fires: see "PNPM ONLY" above.
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      - name: Lint
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Lint
+          GATE_SCRIPT: ${{ inputs.lint_script }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GATE_SCRIPT" ]; then
+            echo "::notice::${GATE_LABEL} skipped: the lint_script input is empty."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "The script input for this gate is empty, so nothing ran. Set \`lint_script\`, or disable the gate with \`lint_enabled: false\` to make the skip explicit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Probe first: `pnpm run --if-present` would exit 0 on a missing
+          # script and report a silent pass.
+          if ! node -e "process.exit(Object.hasOwn(require('./package.json').scripts||{},process.argv[1])?0:1)" "$GATE_SCRIPT"; then
+            echo "::notice::${GATE_LABEL} skipped: package.json declares no \"${GATE_SCRIPT}\" script."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "package.json declares no \`${GATE_SCRIPT}\` script, so this gate had nothing to run. Add the script, point \`lint_script\` at an existing one, or disable the gate with \`lint_enabled: false\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cmd="pnpm run ${GATE_SCRIPT}"
+          echo "::group::${GATE_LABEL} — $cmd"
+          rc=0
+          bash -c "$cmd" || rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ ${cmd}    # exit ${rc}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  format:
+    name: Format check
+    runs-on: ubuntu-latest
+    if: inputs.format_enabled
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      - name: Format check
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Format check
+          GATE_SCRIPT: ${{ inputs.format_script }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GATE_SCRIPT" ]; then
+            echo "::notice::${GATE_LABEL} skipped: the format_script input is empty."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "The script input for this gate is empty, so nothing ran. Set \`format_script\`, or disable the gate with \`format_enabled: false\` to make the skip explicit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! node -e "process.exit(Object.hasOwn(require('./package.json').scripts||{},process.argv[1])?0:1)" "$GATE_SCRIPT"; then
+            echo "::notice::${GATE_LABEL} skipped: package.json declares no \"${GATE_SCRIPT}\" script."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "package.json declares no \`${GATE_SCRIPT}\` script, so this gate had nothing to run. Add the script, point \`format_script\` at an existing check script, or disable the gate with \`format_enabled: false\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cmd="pnpm run ${GATE_SCRIPT}"
+          echo "::group::${GATE_LABEL} — $cmd"
+          rc=0
+          bash -c "$cmd" || rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ ${cmd}    # exit ${rc}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    if: inputs.audit_enabled
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      # The verdict comes from the level-filtered command. `pnpm audit --json`
+      # is run first only to count advisories per severity for the summary, so
+      # its exit code is deliberately discarded.
+      #
+      # The audit covers the whole locked tree, transitive dependencies
+      # included — which is exactly why the freshness gate below does not have
+      # to: `pnpm outdated` reports direct dependencies only.
+      - name: Audit dependencies
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Security audit
+          AUDIT_LEVEL: ${{ inputs.audit_level }}
+        run: |
+          set -euo pipefail
+          audit_json="$RUNNER_TEMP/pnpm-audit.json"
+          counts_file="$RUNNER_TEMP/audit-counts.txt"
+          pnpm audit --json > "$audit_json" 2>/dev/null || true
+
+          echo "::group::${GATE_LABEL} — pnpm audit --audit-level ${AUDIT_LEVEL}"
+          rc=0
+          pnpm audit --audit-level "$AUDIT_LEVEL" || rc=$?
+          echo "::endgroup::"
+
+          AUDIT_JSON="$audit_json" python3 - > "$counts_file" <<'PY'
+          import json, os, sys
+          from pathlib import Path
+
+          path = Path(os.environ["AUDIT_JSON"])
+          try:
+              data = json.loads(path.read_text(encoding="utf-8").strip() or "{}")
+              vulnerabilities = data["metadata"]["vulnerabilities"]
+          except Exception as error:  # noqa: BLE001 - a warning, never a verdict
+              print(f"PARSE WARNING: could not read severity counts from `pnpm audit --json`: {error}")
+              sys.exit(0)
+
+          order = ["critical", "high", "moderate", "low", "info"]
+          summary = ", ".join(f"{name}: {vulnerabilities.get(name, 0)}" for name in order)
+          print(f"advisories by severity — {summary}")
+          PY
+          cat "$counts_file"
+
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ pnpm audit --audit-level ${AUDIT_LEVEL}    # exit ${rc}"
+            cat "$counts_file"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  freshness:
+    name: Dependency freshness
+    runs-on: ubuntu-latest
+    if: inputs.freshness_enabled
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      # Install exactly the locked versions, which also proves the lockfile
+      # resolves against the registry and the requested Node.js.
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      # SCOPE: `pnpm outdated` reports DIRECT dependencies — the ones declared
+      # in package.json — with no flag to widen it to transitive packages.
+      # That matches why the Python sibling gate defaults `outdated_scope` to
+      # `direct`: transitive releases land constantly and usually call for no
+      # decision beyond re-locking, so a gate that chased them would go red for
+      # reasons no reviewer can act on.
+      #
+      # Transitive drift is therefore still covered, twice over: a transitive
+      # VULNERABILITY is the audit gate's job (it audits the whole locked set,
+      # transitive included), and `frozen_lockfile` keeps the installed tree
+      # pinned to what was reviewed.
+      #
+      # `pnpm outdated` exits 1 when anything is outdated and 0 when nothing
+      # is, so the exit code is reported but is not the verdict: the parsed
+      # JSON is. (--format json exits 1 in exactly the same way.)
+      #
+      # KNOWN LIMITATION, deliberately left in place: run against a directory
+      # that has no package.json at all, `pnpm outdated --format json` prints
+      # `{}` and exits 0, so this gate would report "no outdated dependencies"
+      # for a path it cannot actually measure. The run is still not silently
+      # green, because every job here installs first and
+      # `pnpm install --frozen-lockfile` fails with "Headless installation
+      # requires a pnpm-lock.yaml file, but none was found" when there is no
+      # project, `pnpm audit` fails with "No pnpm-lock.yaml found", and the
+      # script gates report a visible SKIPPED because the package.json probe
+      # fails. The only way to reach a green run on a mis-pointed
+      # `working_directory` is to disable every gate except this one.
+      #
+      # The parse is inlined rather than kept in a script file because a
+      # reusable workflow checks out the CALLER's repository: reaching a script
+      # living in this repository would need a cross-repo token, and the default
+      # GITHUB_TOKEN cannot read a private repository other than the caller's.
+      - name: Check for outdated dependencies
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          FAIL_ON_OUTDATED: ${{ inputs.fail_on_outdated }}
+        run: |
+          set -euo pipefail
+          outdated_json="$RUNNER_TEMP/pnpm-outdated.json"
+          report="$RUNNER_TEMP/freshness-report.txt"
+
+          outdated_rc=0
+          pnpm outdated --format json > "$outdated_json" || outdated_rc=$?
+          echo "pnpm outdated exited ${outdated_rc} (1 = outdated packages found)."
+
+          parse_rc=0
+          OUTDATED_JSON="$outdated_json" python3 - > "$report" <<'PY' || parse_rc=$?
+          import json, os, sys
+          from pathlib import Path
+
+          fail_on_outdated = os.environ.get("FAIL_ON_OUTDATED", "true").strip().lower() == "true"
+
+          raw = Path(os.environ["OUTDATED_JSON"]).read_text(encoding="utf-8").strip()
+          if not raw:
+              print(
+                  "ERROR: `pnpm outdated --format json` produced no output, so freshness "
+                  "could not be determined. A gate that cannot measure must not pass."
+              )
+              sys.exit(1)
+
+          try:
+              outdated = json.loads(raw)
+          except json.JSONDecodeError as error:
+              print(f"ERROR: could not parse the `pnpm outdated --format json` output: {error}")
+              sys.exit(1)
+
+          if not isinstance(outdated, dict):
+              print(
+                  "ERROR: expected an object keyed by package name from "
+                  f"`pnpm outdated --format json`, got {type(outdated).__name__}."
+              )
+              sys.exit(1)
+
+          if not outdated:
+              print(
+                  "No outdated direct dependencies: every dependency declared in "
+                  "package.json is at its latest published version."
+              )
+              sys.exit(0)
+
+          rows = []
+          for name in sorted(outdated):
+              info = outdated[name]
+              if not isinstance(info, dict):
+                  print(
+                      f"ERROR: unexpected entry for {name!r} in the `pnpm outdated "
+                      f"--format json` output: expected an object, got {type(info).__name__}."
+                  )
+                  sys.exit(1)
+              rows.append((name, info))
+
+          cells = []
+          for name, info in rows:
+              latest = str(info.get("latest", "?"))
+              if info.get("isDeprecated"):
+                  latest += " (deprecated)"
+              cells.append(
+                  (name, str(info.get("current", "?")), latest, str(info.get("dependencyType", "?")))
+              )
+
+          def column(index, header):
+              return max([len(header)] + [len(row[index]) for row in cells]) + 2
+
+          widths = [column(0, "package"), column(1, "current"), column(2, "latest")]
+
+          print(f"{len(cells)} outdated direct dependenc(ies):\n")
+          print(
+              "package".ljust(widths[0])
+              + "current".ljust(widths[1])
+              + "latest".ljust(widths[2])
+              + "type"
+          )
+          print("-" * (sum(widths) + 4))
+          for name, current, latest, dependency_type in cells:
+              print(
+                  name.ljust(widths[0])
+                  + current.ljust(widths[1])
+                  + latest.ljust(widths[2])
+                  + dependency_type
+              )
+
+          if fail_on_outdated:
+              print(
+                  "\nFAIL: newer releases are available for the dependencies above. "
+                  "Run `pnpm update --latest` (or bump the ranges in package.json) and "
+                  "commit the refreshed pnpm-lock.yaml."
+              )
+              sys.exit(1)
+
+          print(
+              "\nADVISORY only: fail_on_outdated=false, so this run does not fail. "
+              f"{len(rows)} outdated dependency(ies) reported."
+          )
+          print(
+              f"::notice::Freshness gate: {len(rows)} outdated direct dependency(ies) "
+              "reported as an advisory (fail_on_outdated=false).",
+              file=sys.stderr,
+          )
+          PY
+
+          cat "$report"
+          if [ "$parse_rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### Freshness gate (direct dependencies) — ${status}"
+            echo
+            echo '```'
+            cat "$report"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$parse_rc"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    # Tier 0 in v1.1.0 — moved here from tier 1 so that typecheck and unit-
+    # tests downstream can resolve cross-package types from `dist/`. Has no
+    # upstream needs, so no `always()` guard is required: a skipped or
+    # absent upstream does not exist for this job.
+    if: inputs.build_enabled
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      # Building catches mistakes no test can see: an entry point that does not
+      # exist, a bundler config that only fails on a clean tree, a gitignored
+      # file the source imports.
+      #
+      # The artifact is not uploaded: this job is a gate, not a hand-off. A
+      # deploy workflow that needs the output should build it itself.
+      - name: Build
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Build
+          GATE_SCRIPT: ${{ inputs.build_script }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GATE_SCRIPT" ]; then
+            echo "::notice::${GATE_LABEL} skipped: the build_script input is empty."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "The script input for this gate is empty, so nothing ran. Set \`build_script\`, or disable the gate with \`build_enabled: false\` to make the skip explicit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! node -e "process.exit(Object.hasOwn(require('./package.json').scripts||{},process.argv[1])?0:1)" "$GATE_SCRIPT"; then
+            echo "::notice::${GATE_LABEL} skipped: package.json declares no \"${GATE_SCRIPT}\" script."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "package.json declares no \`${GATE_SCRIPT}\` script, so this gate had nothing to run. Add the script, point \`build_script\` at an existing one, or disable the gate with \`build_enabled: false\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cmd="pnpm run ${GATE_SCRIPT}"
+          echo "::group::${GATE_LABEL} — $cmd"
+          rc=0
+          bash -c "$cmd" || rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ ${cmd}    # exit ${rc}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  # ===========================================================================
+  # Tier 1: depends on `build`, run in parallel with each other. Both gates
+  # may resolve cross-package types or compiled CLIs from `dist/`, which is
+  # why the build job was promoted to tier 0 in v1.1.0 — without build ahead
+  # of them, monorepo callers hit a `Cannot find module` catch-22 where build
+  # is gated on typecheck/unit-tests but typecheck/unit-tests need build first.
+  # ===========================================================================
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    # Tier 1: needs build because typecheck of <pkg> may resolve
+    # cross-package types from <dep>/dist/index.d.ts. Without build
+    # producing `dist/` first, typecheck on a monorepo fails with
+    # `TS2307: Cannot find module '@scope/<dep>'`.
+    needs: [build]
+    if: >-
+      always() && !cancelled() && inputs.typecheck_enabled &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      # Strictness is the project's decision, not the workflow's: tsc reads
+      # tsconfig.json, so a project that wants `strict: true` sets it there.
+      - name: Typecheck
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Typecheck
+          GATE_SCRIPT: ${{ inputs.typecheck_script }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GATE_SCRIPT" ]; then
+            echo "::notice::${GATE_LABEL} skipped: the typecheck_script input is empty."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "The script input for this gate is empty, so nothing ran. Set \`typecheck_script\`, or disable the gate with \`typecheck_enabled: false\` to make the skip explicit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! node -e "process.exit(Object.hasOwn(require('./package.json').scripts||{},process.argv[1])?0:1)" "$GATE_SCRIPT"; then
+            echo "::notice::${GATE_LABEL} skipped: package.json declares no \"${GATE_SCRIPT}\" script."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "package.json declares no \`${GATE_SCRIPT}\` script, so this gate had nothing to run. Add the script, point \`typecheck_script\` at an existing one, or disable the gate with \`typecheck_enabled: false\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cmd="pnpm run ${GATE_SCRIPT}"
+          echo "::group::${GATE_LABEL} — $cmd"
+          rc=0
+          bash -c "$cmd" || rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ ${cmd}    # exit ${rc}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    # Tier 1: needs build because unit-tests may exec a compiled CLI from
+    # <pkg>/dist/ (e.g. `vitest cli.test.ts` that runs `node packages/<x>/dist/cli.js`).
+    # Without build producing `dist/` first, those tests ENOENT.
+    needs: [build]
+    if: >-
+      always() && !cancelled() && inputs.unit_tests_enabled &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      # A test runner that reports "no tests found" is not treated as a pass
+      # here: the script exists and it exited 0, so the project says its suite
+      # is green. An empty suite is the project's decision to declare.
+      - name: Unit tests
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Unit tests
+          GATE_SCRIPT: ${{ inputs.unit_test_script }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GATE_SCRIPT" ]; then
+            echo "::notice::${GATE_LABEL} skipped: the unit_test_script input is empty."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "The script input for this gate is empty, so nothing ran. Set \`unit_test_script\`, or disable the gate with \`unit_tests_enabled: false\` to make the skip explicit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! node -e "process.exit(Object.hasOwn(require('./package.json').scripts||{},process.argv[1])?0:1)" "$GATE_SCRIPT"; then
+            echo "::notice::${GATE_LABEL} skipped: package.json declares no \"${GATE_SCRIPT}\" script."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "package.json declares no \`${GATE_SCRIPT}\` script, so this gate had nothing to run. Add the script, point \`unit_test_script\` at an existing one, or disable the gate with \`unit_tests_enabled: false\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cmd="pnpm run ${GATE_SCRIPT}"
+          echo "::group::${GATE_LABEL} — $cmd"
+          rc=0
+          bash -c "$cmd" || rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ ${cmd}    # exit ${rc}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      - name: Resolve coverage paths
+        if: success() && inputs.coverage_enabled
+        id: cov
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          COVERAGE_PATHS: ${{ inputs.coverage_paths }}
+          WORKING_DIRECTORY: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          # Strip whitespace around commas; prefix each pattern with the
+          # working directory so globs resolve against the project tree.
+          # The result is a newline-separated list that flows through
+          # `$GITHUB_OUTPUT` as a single multiline output value, which
+          # `actions/upload-artifact@v4` accepts as a multi-pattern path.
+          IFS=',' read -ra items <<< "$COVERAGE_PATHS"
+          body=""
+          for raw in "${items[@]}"; do
+            item="$(printf '%s' "$raw" | tr -d '[:space:]')"
+            if [ -n "$item" ]; then
+              body="${body}${WORKING_DIRECTORY}/${item}"$'\n'
+            fi
+          done
+          {
+            echo "paths<<_HEREDOC_"
+            printf '%s' "$body"
+            echo "_HEREDOC_"
+          } >> "$GITHUB_OUTPUT"
+          echo "Coverage patterns (newline-separated):"
+          printf '%s' "$body" | sed 's/^/  /'
+
+      - name: Upload coverage
+        if: success() && inputs.coverage_enabled
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: ${{ steps.cov.outputs.paths }}
+          if-no-files-found: warn
+          retention-days: 30
+
+  # ===========================================================================
+  # Tier 2: depends on every tier-0 and tier-1 gate. Serialised so a cheap
+  # failure stops the run before integration runner-minutes are spent.
+  # ===========================================================================
+  integration-tests:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    needs: [lint, format, typecheck, unit-tests, audit, freshness, build]
+    if: >-
+      always() && !cancelled() && inputs.integration_tests_enabled &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm (version from package.json)
+        if: inputs.pnpm_version == ''
+        uses: pnpm/action-setup@v6
+        with:
+          # Without this, action-setup reads the REPOSITORY ROOT's package.json.
+          package_json_file: ${{ inputs.working_directory }}/package.json
+
+      - name: Set up pnpm (pinned version)
+        if: inputs.pnpm_version != ''
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm_version }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: pnpm
+          cache-dependency-path: ${{ inputs.working_directory }}/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.frozen_lockfile }}" = "true" ]; then
+            pnpm install --frozen-lockfile
+          else
+            pnpm install --no-frozen-lockfile
+          fi
+
+      - name: Integration tests
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          GATE_LABEL: Integration tests
+          GATE_SCRIPT: ${{ inputs.integration_test_script }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GATE_SCRIPT" ]; then
+            echo "::notice::${GATE_LABEL} skipped: the integration_test_script input is empty."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "The script input for this gate is empty, so nothing ran. Set \`integration_test_script\`, or disable the gate with \`integration_tests_enabled: false\` to make the skip explicit."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if ! node -e "process.exit(Object.hasOwn(require('./package.json').scripts||{},process.argv[1])?0:1)" "$GATE_SCRIPT"; then
+            echo "::notice::${GATE_LABEL} skipped: package.json declares no \"${GATE_SCRIPT}\" script."
+            {
+              echo "### ${GATE_LABEL} — SKIPPED"
+              echo
+              echo "package.json declares no \`${GATE_SCRIPT}\` script, so this gate had nothing to run. Add the script, point \`integration_test_script\` at an existing one, or disable the gate with \`integration_tests_enabled: false\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          cmd="pnpm run ${GATE_SCRIPT}"
+          echo "::group::${GATE_LABEL} — $cmd"
+          rc=0
+          bash -c "$cmd" || rc=$?
+          echo "::endgroup::"
+          if [ "$rc" -eq 0 ]; then status="PASSED"; else status="FAILED"; fi
+          {
+            echo "### ${GATE_LABEL} — ${status}"
+            echo
+            echo '```'
+            echo "\$ ${cmd}    # exit ${rc}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      - name: Resolve coverage paths
+        if: success() && inputs.coverage_enabled
+        id: cov
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          COVERAGE_PATHS: ${{ inputs.coverage_paths }}
+          WORKING_DIRECTORY: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          # Same resolution shape as the unit-tests gate — see that step for
+          # the explanation of the heredoc over `$GITHUB_OUTPUT`.
+          IFS=',' read -ra items <<< "$COVERAGE_PATHS"
+          body=""
+          for raw in "${items[@]}"; do
+            item="$(printf '%s' "$raw" | tr -d '[:space:]')"
+            if [ -n "$item" ]; then
+              body="${body}${WORKING_DIRECTORY}/${item}"$'\n'
+            fi
+          done
+          {
+            echo "paths<<_HEREDOC_"
+            printf '%s' "$body"
+            echo "_HEREDOC_"
+          } >> "$GITHUB_OUTPUT"
+          echo "Coverage patterns (newline-separated):"
+          printf '%s' "$body" | sed 's/^/  /'
+
+      - name: Upload coverage
+        if: success() && inputs.coverage_enabled
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: ${{ steps.cov.outputs.paths }}
+          if-no-files-found: warn
+          retention-days: 30
