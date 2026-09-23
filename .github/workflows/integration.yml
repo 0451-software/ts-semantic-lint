@@ -37,5 +37,20 @@ jobs:
       # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
       # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
       integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
+      # TEMPORARY: major-version dependency upgrades are deferred to per-major follow-up cards
+      # (eslint 9→10 needs a flat config rewrite; typescript 5→7 needs @typescript-eslint v9
+      # support since `typescript-estree@8.70.x` peer-caps at typescript `<6.1.0`; zod 3→4
+      # requires swapping zod-to-json-schema for Zod 4's native `z.toJSONSchema()` because
+      # zod-to-json-schema@3.25.2 only accepts Zod v3 schemas via `zod/v3`; undici 7→8 bumps
+      # its own engines to Node >=22.19.0, on top of commander 15's >=22.12.0). The freshness
+      # gate still reports the table as an ADVISORY in CI; remove this once all deferred
+      # follow-up cards land and the gate can run strictly. See CHANGELOG.md "Unreleased →
+      # Dependency upgrades" for the per-major decision matrix.
+      fail_on_outdated: false
+      # TEMPORARY: commander 12→15 is a cross-major bump that requires pnpm-lock.yaml
+      # regeneration (15.x does not satisfy the old ^12.1.0 range). Once the lockfile has
+      # been regenerated and committed in this branch, switch back to the default of
+      # `frozen_lockfile: true` so subsequent drift detection re-engages.
+      frozen_lockfile: false
     secrets:
       inherit

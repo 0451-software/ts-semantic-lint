@@ -5,7 +5,7 @@ Jev receives the selected TypeScript source and surrounding context from this to
 structured judgments, and your rule definition decides which judgments become warnings or errors.
 
 ![MIT](https://img.shields.io/badge/license-MIT-blue)
-![Node >=20](https://img.shields.io/badge/node-%E2%89%A520-green)
+![Node >=22.12](https://img.shields.io/badge/node-%E2%89%A522.12-green)
 
 ---
 
@@ -42,7 +42,7 @@ empty (a documented "best-effort, ignore" branch) and which ones hide a real fai
 
 ## Quickstart
 
-You need Node 20 or newer and a TypeSafe API key.
+You need Node 22.12 or newer and a TypeSafe API key.
 
 ```bash
 npm install -g ts-semantic-lint
@@ -424,7 +424,7 @@ small number of new findings on your existing code.
 
 ## Development
 
-The source is plain TypeScript; no transpiler beyond `tsc`. Node 20 or newer is required.
+The source is plain TypeScript; no transpiler beyond `tsc`. Node 22.12 or newer is required (matches the runtime requirement imposed by `commander@^15.0.0`).
 
 ```bash
 git clone https://github.com/0451-software/ts-semantic-lint.git

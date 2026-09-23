@@ -1,0 +1,58 @@
+# Changelog
+
+All notable changes to `ts-semantic-lint` are documented in this file. The format
+follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+The **Unreleased** section is what `pnpm outdated --format json` would otherwise
+fail on. Each major-version bump is tracked here so reviewers can see which
+follow-up card owns which migration.
+
+## [Unreleased]
+
+### Dependency upgrades
+
+Per-major decision matrix (background: PR #16 surfaced 15 outdated direct deps
+once CI finally ran end-to-end after the reusable-workflows vendoring in #15.
+The 9 patch-level bumps ride along; the 6 majors each need a decision).
+
+**Landed in this branch:**
+
+| Package | Old | New | Notes |
+| --- | --- | --- | --- |
+| `commander` | `^12.1.0` | `^15.0.0` | CLI surface is small (`src/cli/parse-argv.ts`); breakage surface checked against commander v13/14/15 release notes. Forces `engines.node: ">=22.12.0"` per commander 15 release notes (ESM-only + Node ≥22.12 for `require(esm)`). README/CONTRIBUTING references to Node version updated. |
+| `typescript` | `^5.7.3` | `^5.9.3` | Last 5.x before `@typescript-eslint/typescript-estree@8.70.x`'s peer cap of `<6.1.0`. In-range bump; no source changes expected. TypeScript 5→7 deferred (see below). |
+| `@types/node` | `^22.10.5` | `^22.20.3` | In-range bump; matches current Node 22 LTS line that the new `engines.node` requires. |
+| `@typescript-eslint/eslint-plugin` | `^8.20.0` | `^8.70.1` | Patch-level; lint is disabled on the CI gate today so this doesn't break anything. |
+| `@typescript-eslint/parser` | `^8.20.0` | `^8.70.1` | Patch-level. |
+| `@typescript-eslint/typescript-estree` | `^8.20.0` | `^8.70.1` | Patch-level; peer cap unchanged at `typescript <6.1.0`. |
+| `prettier` | `^3.4.2` | `^3.9.9` | Patch-level. |
+| `tsx` | `^4.19.2` | `^4.23.15` | Patch-level. |
+| `tinyglobby` | `^0.2.10` | `^0.2.17` | Patch-level. |
+| `ignore` | `^7.0.0` | `^7.0.10` | Patch-level. |
+
+**Deferred to follow-up cards (option c in the body of t_ef1f39fa):**
+
+| Package | Old → Latest | Reason to defer | Follow-up card |
+| --- | --- | --- | --- |
+| `eslint` | `^9.18.0` → `^10.11.0` | Requires ESLint v9 flat-config (`eslint.config.mjs`) first; today the repo has none and the lint gate is disabled (`lint_enabled: false` on the caller). Bumping ESLint without a flat config would break the gate the moment someone re-enables it. | t_ef1f39fa follow-up #1 |
+| `typescript` | `^5.9.3` → `^7.0.2` | `@typescript-eslint/typescript-estree@8.70.1` peer dep is `typescript: ">=4.8.4 <6.1.0"`. The typescript-estree parser is a direct dep used at compile time by `src/analyzer/`. Bumping typescript past 6.x requires either waiting for `@typescript-eslint` to ship a major that lifts the peer cap (likely v9) or replacing typescript-estree with `typescript` itself as the parser (substantial analyzer rewrite). | t_ef1f39fa follow-up #2 |
+| `zod` | `^3.24.1` → `^4.6.5` | `zod-to-json-schema@3.25.2` is **deprecated as of Nov 2025** (its README now recommends Zod 4's native `z.toJSONSchema()`) and only accepts Zod v3 schemas via `zod/v3` even when Zod v4 is in deps. `src/config/json-schema.ts` would have to switch to native `z.toJSONSchema()`. Zod 4 also has breaking changes in error customization, `z.record` (one-arg dropped), `.strict()` (deprecated), `.format()`/`.flatten()` (deprecated), `ZodError.issues` shape, and `.nonempty()` (deprecated). | t_ef1f39fa follow-up #3 |
+| `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.12.0` via commander 15, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.12.0`. | t_ef1f39fa follow-up #4 |
+
+**Already on a separate branch (not touched in this branch):**
+
+| Package | Old → New | Branch | PR |
+| --- | --- | --- | --- |
+| `vitest` | `^2.1.8` → `^5.0.1` | `agent/bump-vitest` | #17 (security audit fixup) |
+
+### CI
+
+- `.github/workflows/integration.yml` now passes `fail_on_outdated: false` to the
+  vendored reusable (option b in the body of t_ef1f39fa) so the freshness gate
+  no longer fails the entire PR on every run while the deferred majors
+  above land individually. The freshness gate still **runs** and reports the
+  outdated table — it just emits an advisory notice instead of a hard fail.
+  The comment block above the input explains the deferral plan and lists the
+  follow-up cards. Remove `fail_on_outdated: false` once all four deferred
+  cards above have landed and `pnpm outdated --format json` is empty.

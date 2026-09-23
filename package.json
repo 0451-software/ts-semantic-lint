@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "packageManager": "pnpm@10.0.0",
   "bin": {
@@ -30,22 +30,22 @@
     "prepack": "npm run clean && npm run build"
   },
   "dependencies": {
-    "@typescript-eslint/typescript-estree": "^8.20.0",
-    "commander": "^12.1.0",
-    "ignore": "^7.0.0",
-    "tinyglobby": "^0.2.10",
+    "@typescript-eslint/typescript-estree": "^8.70.1",
+    "commander": "^15.0.0",
+    "ignore": "^7.0.10",
+    "tinyglobby": "^0.2.17",
     "undici": "^7.2.0",
     "zod": "^3.24.1",
     "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "@typescript-eslint/eslint-plugin": "^8.20.0",
-    "@typescript-eslint/parser": "^8.20.0",
+    "@types/node": "^22.20.3",
+    "@typescript-eslint/eslint-plugin": "^8.70.1",
+    "@typescript-eslint/parser": "^8.70.1",
     "eslint": "^9.18.0",
-    "prettier": "^3.4.2",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3",
+    "prettier": "^3.9.9",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
     "vitest": "^2.1.8"
   }
 }
