@@ -174,7 +174,13 @@ async function readRuleFile(path: string): Promise<RuleInput[]> {
 }
 
 function parseOne<T>(
-  schema: { safeParse: (v: unknown) => { success: true; data: T } | { success: false; error: { issues: { path: (string | number)[]; message: string }[] } } },
+  schema: {
+    safeParse: (
+      v: unknown,
+    ) =>
+      | { success: true; data: T }
+      | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
+  },
   value: unknown,
   path: string,
   pointer = "",
