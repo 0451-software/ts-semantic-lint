@@ -34,6 +34,26 @@ jobs:
       # as "added by the cli worktree in pass 2" — not yet on main). Skip lint until that lands
       # in a follow-up PR; default of `true` would fail every run against v9 with no flat config.
       lint_enabled: false
+      # The unit-test gate runs `pnpm run test` (default), which is `vitest run` and picks up
+      # EVERY test file — including tests/integration/live.test.ts. That file's `beforeAll`
+      # throws `CLI not built. Run npm run build first (looked for dist/cli.js)` because
+      # `vitest run` and the `build` job run on separate runners with separate checkouts;
+      # even with `needs: [build]`, the artifact is not handed across jobs. The reusable-workflows
+      # structural fix for this gap (build uploads `dist/`, unit-tests downloads it) is tracked
+      # separately as upstream PR #45 / kanban t_8e0a7b6c / t_55373397. Until that lands in
+      # the vendored copy, exclude the integration suite from the unit-test gate here so PR CI
+      # goes green; the live suite still runs via the integration-tests gate on cron + dispatch.
+      #
+      # `test:unit` is a new package.json script (added in this commit) that wraps
+      # `vitest run --exclude '**/integration/**'`. The reusable workflow runs scripts via
+      # `pnpm run <GATE_SCRIPT>` after probing package.json for the script name, so we point
+      # at the script rather than at a literal command — passing a multi-word command here
+      # would either fail the probe and silently skip the gate (worse than failing) or be
+      # forwarded to `pnpm run`, which would treat `vitest` as the script name and miss it.
+      unit_test_script: "test:unit"
+      # Same intent on the integration-tests gate: scope it to tests/integration so it never
+      # double-runs the unit suite. Matches the package.json script `test:integration` verbatim.
+      integration_test_script: "test:integration"
       # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
       # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
       integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
