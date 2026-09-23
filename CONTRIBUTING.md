@@ -48,8 +48,7 @@ review — it's the public contract.
 ## Build / Lint / Format
 
 - `npm run typecheck` — `tsc --noEmit`, must pass with **zero errors**.
-- `npm run lint` — ESLint flat config (in `eslint.config.mjs` — added by the
-  cli worktree in pass 2).
+- `npm run lint` — ESLint v10 flat config (in `eslint.config.mjs`).
 - `npm run format:check` — Prettier, defaults.
 
 ## PR Discipline

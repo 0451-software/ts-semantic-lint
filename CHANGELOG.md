@@ -42,6 +42,9 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 | `tinyglobby` | `^0.2.10` | `^0.2.17` | Patch-level. |
 | `ignore` | `^7.0.0` | `^7.0.10` | Patch-level. |
 | `vitest` | `^2.1.8` | `^5.0.0` | Merged from PR #17 (security advisory clearance); adds `vite@^6.4.3` direct dep + `pnpm.overrides` pinning `vite` and `esbuild`. |
+| `eslint` | `^9.18.0` | `^10.11.0` | Requires the flat-config rewrite (`eslint.config.mjs`) that this PR also lands. Forces `engines.node: ">=22.13.0"` (eslint 10 dropped Node `<20.19`, `<22.13`). Adds `@eslint/js@^10.0.1` and `typescript-eslint@^8.70.1` to devDeps (the latter is the meta-package recommended by the typescript-eslint getting-started guide). Source changes: 4 lint fixes (2× `preserve-caught-error` for `throw new Error(msg, { cause })`, 2× dead-import cleanups in `runner.test.ts`/`output.test.ts`, plus the `EXTRACTABLE_NODE_KINDS` re-export tidy in `analyzer/index.ts`). |
+| `@eslint/js` | _(new)_ | `^10.0.1` | Required by the flat config (`eslint.config.mjs` imports `js.configs.recommended`). |
+| `typescript-eslint` | _(new)_ | `^8.70.1` | Meta-package recommended by typescript-eslint's flat-config docs (`tseslint.config(...)` + `tseslint.configs.recommended`). |
 
 **Newly outdated as a side effect of the vitest 5 bump (vite, esbuild are now direct devDeps through `pnpm.overrides`):**
 
@@ -53,10 +56,9 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
 
 | Package | Old → Latest | Reason to defer | Follow-up card |
 | --- | --- | --- | --- |
-| `eslint` | `^9.18.0` → `^10.11.0` | Requires ESLint v9 flat-config (`eslint.config.mjs`) first; today the repo has none and the lint gate is disabled (`lint_enabled: false` on the caller). Bumping ESLint without a flat config would break the gate the moment someone re-enables it. | t_ef1f39fa follow-up #1 |
 | `typescript` | `^5.9.3` → `^7.0.2` | `@typescript-eslint/typescript-estree@8.70.1` peer dep is `typescript: ">=4.8.4 <6.1.0"`. The typescript-estree parser is a direct dep used at compile time by `src/analyzer/`. Bumping typescript past 6.x requires either waiting for `@typescript-eslint` to ship a major that lifts the peer cap (likely v9) or replacing typescript-estree with `typescript` itself as the parser (substantial analyzer rewrite). | t_ef1f39fa follow-up #2 |
 | `zod` | `^3.24.1` → `^4.6.5` | `zod-to-json-schema@3.25.2` is **deprecated as of Nov 2025** (its README now recommends Zod 4's native `z.toJSONSchema()`) and only accepts Zod v3 schemas via `zod/v3` even when Zod v4 is in deps. `src/config/json-schema.ts` would have to switch to native `z.toJSONSchema()`. Zod 4 also has breaking changes in error customization, `z.record` (one-arg dropped), `.strict()` (deprecated), `.format()`/`.flatten()` (deprecated), `ZodError.issues` shape, and `.nonempty()` (deprecated). | t_ef1f39fa follow-up #3 |
-| `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.12.0` via commander 15, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.12.0`. | t_ef1f39fa follow-up #4 |
+| `undici` | `^7.2.0` → `^8.11.0` | undici@8's `engines.node` is `>=22.19.0`. The repo already moved to `>=22.13.0` via commander 15 + eslint 10, so a second engines bump to `>=22.19.0` is required for undici 8. `undici@7.29.1` (latest 7.x) only needs `>=20.18.1` and is fully compatible with the current `>=22.13.0`. | t_ef1f39fa follow-up #4 |
 
 ### CI
 
@@ -66,11 +68,18 @@ The 9 patch-level bumps ride along; the 6 majors each need a decision).
   above land individually. The freshness gate still **runs** and reports the
   outdated table — it just emits an advisory notice instead of a hard fail.
   The comment block above the input explains the deferral plan and lists the
-  follow-up cards. Remove `fail_on_outdated: false` once all four deferred
+  follow-up cards. Remove `fail_on_outdated: false` once all three deferred
   cards above have landed and `pnpm outdated --format json` is empty.
 - Also passes `frozen_lockfile: false` for this PR so the commander 12→15
   cross-major bump can regenerate `pnpm-lock.yaml` in CI. Restore the default
   of `true` once the lockfile is back in sync.
+- Lint is now **enabled** (`lint_enabled: true`, the default). The
+  `eslint.config.mjs` flat config added in this branch passes ESLint v10's
+  recommended ruleset + typescript-eslint's recommended ruleset against the
+  full repo (clean run on `agent/upgrade-eslint-10-t_84c2ac5d`). Lint fixups
+  in this PR: 2× `preserve-caught-error` (`analyzer/index.ts`,
+  `runner/evaluate.ts`, `runner/extract.ts`) and dead-import cleanups in
+  `runner.test.ts`/`output.test.ts`/`analyzer/index.ts`.
 
 ### Acceptance — verified by PR #20 CI run
 

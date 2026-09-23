@@ -6,8 +6,7 @@
 # at ./.github/workflows/_reusable-node-quality-gates.yml is byte-identical to upstream at the
 # recorded SHA; re-vendor when upstream changes.
 # Mirrors the pre-PR-#14 intent (b7519cd): TYPESAFE_API_KEY reaches the integration-tests gate
-# via `secrets: inherit`; lint is disabled because the ESLint v9 flat config (`eslint.config.mjs`)
-# is documented in CONTRIBUTING.md but not yet committed — tracked as a separate follow-up.
+# via `secrets: inherit`; lint now runs from a flat config (`eslint.config.mjs`, eslint v10).
 
 name: integration
 
@@ -30,22 +29,21 @@ jobs:
     name: Quality gates
     uses: ./.github/workflows/_reusable-node-quality-gates.yml
     with:
-      # ESLint v9 flat config is not yet committed (CONTRIBUTING.md documents `eslint.config.mjs`
-      # as "added by the cli worktree in pass 2" — not yet on main). Skip lint until that lands
-      # in a follow-up PR; default of `true` would fail every run against v9 with no flat config.
-      lint_enabled: false
+      # ESLint v10 flat config (`eslint.config.mjs`) is committed; lint is the default
+      # `true` so no override is set here.
       # Skip the live Jev integration-tests gate on PRs (no org secrets in fork PRs); run it on
       # weekly cron and manual dispatch where TYPESAFE_API_KEY is available via secrets: inherit.
       integration_tests_enabled: ${{ github.event_name != 'pull_request' }}
       # TEMPORARY: major-version dependency upgrades are deferred to per-major follow-up cards
-      # (eslint 9→10 needs a flat config rewrite; typescript 5→7 needs @typescript-eslint v9
-      # support since `typescript-estree@8.70.x` peer-caps at typescript `<6.1.0`; zod 3→4
-      # requires swapping zod-to-json-schema for Zod 4's native `z.toJSONSchema()` because
-      # zod-to-json-schema@3.25.2 only accepts Zod v3 schemas via `zod/v3`; undici 7→8 bumps
-      # its own engines to Node >=22.19.0, on top of commander 15's >=22.12.0). The freshness
-      # gate still reports the table as an ADVISORY in CI; remove this once all deferred
-      # follow-up cards land and the gate can run strictly. See CHANGELOG.md "Unreleased →
-      # Dependency upgrades" for the per-major decision matrix.
+      # (typescript 5→7 needs @typescript-eslint v9 support since `typescript-estree@8.70.x`
+      # peer-caps at typescript `<6.1.0`; zod 3→4 requires swapping zod-to-json-schema for Zod
+      # 4's native `z.toJSONSchema()` because zod-to-json-schema@3.25.2 only accepts Zod v3
+      # schemas via `zod/v3`; undici 7→8 bumps its own engines to Node >=22.19.0, on top of
+      # commander 15's >=22.12.0; eslint 9→10 was just landed — leave this escape hatch until
+      # the remaining follow-up cards land too). The freshness gate still reports the table
+      # as an ADVISORY in CI; remove this once all deferred follow-up cards land and the gate
+      # can run strictly. See CHANGELOG.md "Unreleased → Dependency upgrades" for the
+      # per-major decision matrix.
       fail_on_outdated: false
       # TEMPORARY: commander 12→15 is a cross-major bump that requires pnpm-lock.yaml
       # regeneration (15.x does not satisfy the old ^12.1.0 range). Once the lockfile has

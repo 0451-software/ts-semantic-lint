@@ -172,6 +172,7 @@ async function runOneBatch(
       error instanceof Error ? error.message : String(error);
     throw new Error(
       `evaluating ${rule.id} for ${batchTargets.length} target(s) (e.g. ${batchTargets[0]?.file ?? "<unknown>"}): ${detail}`,
+      { cause: error },
     );
   }
 
